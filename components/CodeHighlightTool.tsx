@@ -12,6 +12,7 @@ const CodeHighlightTool: React.FC = () => {
     const [isLoading, setIsLoading] = useState<boolean>(false);
     const [error, setError] = useState<string | null>(null);
     const [copySuccess, setCopySuccess] = useState<boolean>(false);
+    const [copyHtmlSuccess, setCopyHtmlSuccess] = useState<boolean>(false);
 
     const handleHighlight = useCallback(async () => {
         if (!code) {
@@ -88,7 +89,8 @@ const CodeHighlightTool: React.FC = () => {
         });
 
         navigator.clipboard.write([clipboardItem]).then(() => {
-            alert('已复制为富文本格式,可直接粘贴到Word!');
+            setCopyHtmlSuccess(true);
+            setTimeout(() => setCopyHtmlSuccess(false), 2000);
         }).catch(err => {
             console.error('Failed to copy as HTML: ', err);
             handleCopyAsText();
@@ -128,6 +130,24 @@ const CodeHighlightTool: React.FC = () => {
             </div>
 
             {error && <div className="w-full max-w-6xl mb-4"><p className="text-red-500 bg-red-100 dark:bg-red-900/50 p-3 rounded-lg">{error}</p></div>}
+
+            {copySuccess && (
+                <div className="w-full max-w-6xl mb-4">
+                    <p className="text-green-600 bg-green-100 dark:bg-green-900/50 p-3 rounded-lg flex items-center gap-2">
+                        <span className="material-symbols-outlined text-xl">check_circle</span>
+                        已复制文本到剪贴板!
+                    </p>
+                </div>
+            )}
+
+            {copyHtmlSuccess && (
+                <div className="w-full max-w-6xl mb-4">
+                    <p className="text-green-600 bg-green-100 dark:bg-green-900/50 p-3 rounded-lg flex items-center gap-2">
+                        <span className="material-symbols-outlined text-xl">check_circle</span>
+                        已复制为富文本格式,可直接粘贴到Word!
+                    </p>
+                </div>
+            )}
 
             <div className="w-full max-w-6xl rounded-xl border border-gray-200 dark:border-gray-700/50 bg-white dark:bg-gray-800/20 shadow-sm">
                 <div className="grid grid-cols-1 lg:grid-cols-2">
@@ -186,19 +206,6 @@ const CodeHighlightTool: React.FC = () => {
                                 </div>
                             )}
                         </div>
-                    </div>
-                </div>
-            </div>
-
-            {/* 使用提示 */}
-            <div className="w-full max-w-6xl mt-8 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
-                <div className="flex gap-3">
-                    <span className="material-symbols-outlined text-blue-600 dark:text-blue-400 text-xl">info</span>
-                    <div className="flex-1">
-                        <h4 className="text-sm font-semibold text-blue-900 dark:text-blue-200 mb-1">使用提示</h4>
-                        <p className="text-xs text-blue-700 dark:text-blue-300">
-                            选择正确的编程语言可以获得更准确的高亮效果。点击"复制到Word"按钮可以直接粘贴到Word文档中,保持代码格式和颜色。
-                        </p>
                     </div>
                 </div>
             </div>
