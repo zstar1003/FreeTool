@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html class="dark" lang="zh-CN"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>在线图片格式转换器 - 工具集</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "primary": "#4f46e5",
+              "background-light": "#f8fafc",
+              "background-dark": "#0b1120",
+            },
+            fontFamily: {
+              "display": ["Inter", "sans-serif"]
+            },
+            borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings:
+            'FILL' 0,
+            'wght' 400,
+            'GRAD' 0,
+            'opsz' 24
+        }
+    </style>
+</head>
+<body class="font-display bg-background-light dark:bg-background-dark antialiased">
+<div class="relative flex min-h-screen w-full flex-col">
+<header class="sticky top-0 z-50 w-full border-b border-gray-200/80 dark:border-white/10 bg-background-light/80 dark:bg-background-dark/80 backdrop-blur-sm">
+<div class="container mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
+<div class="flex items-center gap-4 text-gray-800 dark:text-white">
+<div class="size-6 text-primary">
+<svg fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+<path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5-10-5-10 5z"></path>
+</svg>
+</div>
+<h2 class="text-lg font-bold">工具集</h2>
+</div>
+<div class="flex items-center gap-2">
+<button class="flex h-9 cursor-pointer items-center justify-center overflow-hidden rounded-lg px-4 bg-primary text-white text-sm font-bold leading-normal tracking-wide transition-opacity hover:opacity-90">
+<span class="truncate">登录</span>
+</button>
+<button class="flex h-9 cursor-pointer items-center justify-center overflow-hidden rounded-lg px-4 bg-gray-200 dark:bg-white/10 text-gray-800 dark:text-white text-sm font-bold leading-normal tracking-wide transition-colors hover:bg-gray-300 dark:hover:bg-white/20">
+<span class="truncate">注册</span>
+</button>
+</div>
+</div>
+</header>
+<div class="container mx-auto flex-1 max-w-7xl">
+<div class="flex">
+<aside class="sticky top-16 hidden h-[calc(100vh-4rem)] w-56 shrink-0 border-r border-gray-200/80 dark:border-white/10 py-8 lg:block">
+<nav class="flex flex-col gap-1 pr-4">
+<h3 class="mb-2 px-4 text-sm font-semibold text-gray-500 dark:text-gray-400">所有工具</h3>
+<a class="flex items-center gap-3 rounded-lg bg-primary/10 px-4 py-2.5 text-sm font-semibold text-primary" href="#">
+<span class="material-symbols-outlined text-base">image</span>
+<span>图片格式转换</span>
+</a>
+<a class="flex items-center gap-3 rounded-lg px-4 py-2.5 text-sm font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/5" href="#">
+<span class="material-symbols-outlined text-base">translate</span>
+<span>在线翻译</span>
+</a>
+<a class="flex items-center gap-3 rounded-lg px-4 py-2.5 text-sm font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/5" href="#">
+<span class="material-symbols-outlined text-base">qr_code_2</span>
+<span>二维码生成器</span>
+</a>
+<a class="flex items-center gap-3 rounded-lg px-4 py-2.5 text-sm font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/5" href="#">
+<span class="material-symbols-outlined text-base">compress</span>
+<span>文件压缩</span>
+</a>
+</nav>
+</aside>
+<main class="w-full flex-1">
+<div class="mx-auto max-w-3xl px-4 py-12 sm:px-6 lg:px-8">
+<div class="flex flex-col gap-10">
+<div class="flex flex-col gap-3 text-center">
+<h1 class="text-4xl font-black tracking-tighter text-gray-900 dark:text-white sm:text-5xl">在线图片格式转换</h1>
+<p class="text-base font-normal text-gray-600 dark:text-gray-400">快速将您的图片转换为 JPG, PNG, WEBP 等多种格式。免费、安全。</p>
+</div>
+<div class="w-full space-y-8 rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-background-dark p-6 sm:p-8 shadow-sm">
+<div class="flex flex-col items-center gap-6 rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-700 p-8 sm:p-14 text-center">
+<span class="material-symbols-outlined text-5xl text-gray-400 dark:text-gray-500">upload_file</span>
+<div class="flex flex-col items-center gap-2">
+<p class="text-lg font-bold text-gray-900 dark:text-white">拖拽图片至此</p>
+<p class="text-sm text-gray-500 dark:text-gray-400">支持 JPG, PNG, BMP, GIF 等格式</p>
+</div>
+<button class="flex h-10 min-w-[84px] cursor-pointer items-center justify-center overflow-hidden rounded-lg bg-gray-100 dark:bg-white/10 px-4 text-sm font-bold text-gray-800 dark:text-white transition-colors hover:bg-gray-200 dark:hover:bg-white/20">
+<span>点击选择文件</span>
+</button>
+</div>
+<div class="space-y-4">
+<h3 class="px-1 text-lg font-bold text-gray-900 dark:text-white">转换为：</h3>
+<div class="flex h-12 flex-1 items-center justify-center rounded-lg bg-gray-100 dark:bg-white/5 p-1.5">
+<label class="flex h-full flex-1 cursor-pointer items-center justify-center overflow-hidden rounded-md px-2 text-sm font-medium text-gray-500 dark:text-gray-400 transition-colors has-[:checked]:bg-white has-[:checked]:text-gray-900 has-[:checked]:shadow-sm dark:has-[:checked]:bg-gray-700 dark:has-[:checked]:text-white">
+<span class="truncate">JPG</span>
+<input checked="" class="sr-only" name="format-select" type="radio" value="JPG"/>
+</label>
+<label class="flex h-full flex-1 cursor-pointer items-center justify-center overflow-hidden rounded-md px-2 text-sm font-medium text-gray-500 dark:text-gray-400 transition-colors has-[:checked]:bg-white has-[:checked]:text-gray-900 has-[:checked]:shadow-sm dark:has-[:checked]:bg-gray-700 dark:has-[:checked]:text-white">
+<span class="truncate">PNG</span>
+<input class="sr-only" name="format-select" type="radio" value="PNG"/>
+</label>
+<label class="flex h-full flex-1 cursor-pointer items-center justify-center overflow-hidden rounded-md px-2 text-sm font-medium text-gray-500 dark:text-gray-400 transition-colors has-[:checked]:bg-white has-[:checked]:text-gray-900 has-[:checked]:shadow-sm dark:has-[:checked]:bg-gray-700 dark:has-[:checked]:text-white">
+<span class="truncate">WEBP</span>
+<input class="sr-only" name="format-select" type="radio" value="WEBP"/>
+</label>
+<label class="flex h-full flex-1 cursor-pointer items-center justify-center overflow-hidden rounded-md px-2 text-sm font-medium text-gray-500 dark:text-gray-400 transition-colors has-[:checked]:bg-white has-[:checked]:text-gray-900 has-[:checked]:shadow-sm dark:has-[:checked]:bg-gray-700 dark:has-[:checked]:text-white">
+<span class="truncate">GIF</span>
+<input class="sr-only" name="format-select" type="radio" value="GIF"/>
+</label>
+</div>
+</div>
+<button class="flex h-12 w-full cursor-pointer items-center justify-center gap-2 overflow-hidden rounded-lg bg-primary px-6 text-base font-bold text-white shadow-lg shadow-primary/20 transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50">
+<span class="material-symbols-outlined">download</span>
+<span class="truncate">转换并下载</span>
+</button>
+</div>
+<section class="py-12">
+<div class="flex flex-col items-center gap-4 text-center">
+<h2 class="text-3xl font-bold tracking-tight text-gray-900 dark:text-white">如何使用</h2>
+<p class="max-w-xl text-gray-600 dark:text-gray-400">只需三步，轻松转换您的图片。</p>
+</div>
+<div class="mt-10 grid grid-cols-1 gap-8 md:grid-cols-3">
+<div class="flex flex-col items-center gap-4 text-center">
+<div class="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary">
+<span class="material-symbols-outlined">upload</span>
+</div>
+<h3 class="text-lg font-bold text-gray-900 dark:text-white">1. 上传图片</h3>
+<p class="text-sm text-gray-600 dark:text-gray-400">点击上传区域选择文件，或直接拖拽您的图片文件。</p>
+</div>
+<div class="flex flex-col items-center gap-4 text-center">
+<div class="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary">
+<span class="material-symbols-outlined">tune</span>
+</div>
+<h3 class="text-lg font-bold text-gray-900 dark:text-white">2. 选择格式</h3>
+<p class="text-sm text-gray-600 dark:text-gray-400">从 JPG, PNG 等可用选项中选择您需要的目标格式。</p>
+</div>
+<div class="flex flex-col items-center gap-4 text-center">
+<div class="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary">
+<span class="material-symbols-outlined">download_done</span>
+</div>
+<h3 class="text-lg font-bold text-gray-900 dark:text-white">3. 下载文件</h3>
+<p class="text-sm text-gray-600 dark:text-gray-400">点击下载按钮，您的新图片将在几秒钟内准备就绪。</p>
+</div>
+</div>
+</section>
+</div>
+</div>
+</main>
+</div>
+</div>
+<footer class="w-full border-t border-gray-200/80 dark:border-white/10 bg-background-light dark:bg-background-dark">
+<div class="container mx-auto flex max-w-7xl flex-col items-center justify-between gap-4 px-4 py-8 sm:flex-row sm:px-6 lg:px-8">
+<p class="text-sm text-gray-500 dark:text-gray-400">© 2024 工具集. 保留所有权利。</p>
+<div class="flex items-center gap-6">
+<a class="text-sm text-gray-500 dark:text-gray-400 hover:text-primary dark:hover:text-primary transition-colors" href="#">关于</a>
+<a class="text-sm text-gray-500 dark:text-gray-400 hover:text-primary dark:hover:text-primary transition-colors" href="#">隐私</a>
+<a class="text-sm text-gray-500 dark:text-gray-400 hover:text-primary dark:hover:text-primary transition-colors" href="#">联系我们</a>
+</div>
+</div>
+</footer>
+</div>
+</body></html>

@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+
+<html class="light dark" lang="zh-CN"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>文本清理工具</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet"/>
+<script>tailwind.config = {darkMode: "class", theme: {extend: {colors: {primary: "#607AFB", "primary-light": "#eef2ff", "background-light": "#f5f6f8", "background-dark": "#0f1323"}, fontFamily: {display: "Inter"}, borderRadius: {DEFAULT: "0.25rem", lg: "0.5rem", xl: "0.75rem", full: "9999px"}}}};</script>
+<style>
+    body {
+      font-family: 'Inter', sans-serif;
+    }
+  </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark font-display text-slate-900 dark:text-slate-50">
+<div class="relative flex h-auto min-h-screen w-full flex-col group/design-root overflow-x-hidden">
+<div class="flex min-h-screen">
+<aside class="w-64 flex-shrink-0 bg-white dark:bg-slate-900/70 border-r border-slate-200 dark:border-slate-800 p-4">
+<div class="flex flex-col h-full">
+<div class="flex items-center gap-3 mb-8">
+<div class="bg-center bg-no-repeat aspect-square bg-cover rounded-full size-10" data-alt="Abstract logo for the toolbox" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuA09a_b57ZLR-VzFemZKi8f29Kdu6Q7Vfx5Bu13N6IzQ06NuYTjLUK7w15ryICYNRFXIg_VGtgPNdjZnpOlDYHVS2uvlk-mqyBYCZwLmMbTyhf71x8jV7tdACODw0g4D7FC8_xC9dKQpxirF176e7WwORNat8xNUYyDY8bqBg9uRVyP6SH3VNBzl-8jrhTNHJOB52mK0Ewb7bazAxRdynzAMgAK9HGjNrH8hw4puGON_V1hIte3Vgomx6ILMLiTKRXoX2_oKQikMmGX");'></div>
+<div class="flex flex-col">
+<h1 class="text-slate-900 dark:text-white text-base font-medium leading-normal">工具箱</h1>
+<p class="text-slate-500 dark:text-slate-400 text-sm font-normal leading-normal">实用工具集合</p>
+</div>
+</div>
+<nav class="flex flex-col gap-2">
+<a class="flex items-center gap-3 px-3 py-2 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg" href="#">
+<span class="material-symbols-outlined text-2xl">translate</span>
+<p class="text-sm font-medium leading-normal">文本翻译</p>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg" href="#">
+<span class="material-symbols-outlined text-2xl">image</span>
+<p class="text-sm font-medium leading-normal">图片格式转换</p>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg bg-primary-light dark:bg-primary/20 text-primary dark:text-indigo-400" href="#">
+<span class="material-symbols-outlined text-2xl">spark</span>
+<p class="text-sm font-bold leading-normal">文本清理</p>
+</a>
+</nav>
+</div>
+</aside>
+<main class="flex-1 p-8 md:p-12">
+<div class="max-w-4xl mx-auto">
+<div class="mb-8">
+<h1 class="text-slate-900 dark:text-white text-4xl font-black leading-tight tracking-[-0.033em]">文本清理</h1>
+<p class="text-slate-500 dark:text-slate-400 text-base font-normal leading-normal mt-2">快速清除文本中所有多余的空格、换行符和制表符。</p>
+</div>
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
+<div class="flex flex-col gap-4">
+<label class="flex flex-col min-w-40 flex-1">
+<p class="text-slate-900 dark:text-white text-base font-medium leading-normal pb-2">原始文本</p>
+<textarea class="form-input flex w-full min-w-0 flex-1 resize-y overflow-hidden rounded-lg text-slate-900 dark:text-white focus:outline-0 focus:ring-2 focus:ring-primary/50 border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 focus:border-primary dark:focus:border-primary min-h-60 placeholder:text-slate-400 dark:placeholder:text-slate-500 p-[15px] text-base font-normal leading-normal" placeholder="请在此处粘贴文本..."></textarea>
+</label>
+<div class="flex justify-start">
+<button class="flex min-w-[84px] w-full lg:w-auto cursor-pointer items-center justify-center overflow-hidden rounded-lg h-12 px-5 bg-primary text-slate-50 text-base font-bold leading-normal tracking-[0.015em] hover:bg-primary/90 transition-colors">
+<span class="truncate">清理文本</span>
+</button>
+</div>
+</div>
+<div class="flex flex-col gap-4">
+<div class="flex flex-col min-w-40 flex-1">
+<div class="flex justify-between items-center pb-2">
+<p class="text-slate-900 dark:text-white text-base font-medium leading-normal">清理后的文本</p>
+<button class="flex items-center gap-2 text-slate-500 dark:text-slate-400 hover:text-primary dark:hover:text-indigo-400 transition-colors">
+<span class="material-symbols-outlined text-xl">content_copy</span>
+<span class="text-sm font-medium">复制</span>
+</button>
+</div>
+<textarea class="form-input flex w-full min-w-0 flex-1 resize-y overflow-hidden rounded-lg text-slate-900 dark:text-white focus:outline-0 focus:ring-0 border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 min-h-60 placeholder:text-slate-400 dark:placeholder:text-slate-500 p-[15px] text-base font-normal leading-normal" placeholder="清理后的文本将显示在此处..." readonly=""></textarea>
+</div>
+<div class="flex items-center gap-3 p-3 rounded-lg bg-green-100 dark:bg-green-900/50 border border-green-200 dark:border-green-800/50 opacity-0 transition-opacity" role="alert">
+<span class="material-symbols-outlined text-green-600 dark:text-green-400">check_circle</span>
+<p class="text-green-800 dark:text-green-300 text-sm font-medium">已复制到剪贴板！</p>
+</div>
+</div>
+</div>
+</div>
+</main>
+</div>
+</div>
+</body></html>

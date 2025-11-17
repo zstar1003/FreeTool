@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html class="dark" lang="zh-CN"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>在线翻译 - 多功能工具站</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#4F46E5",
+                        "background-light": "#F8F9FC",
+                        "background-dark": "#111827",
+                    },
+                    fontFamily: {
+                        "display": ["Inter", "sans-serif"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings:
+                'FILL' 0,
+                'wght' 400,
+                'GRAD' 0,
+                'opsz' 24
+        }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark font-display text-gray-800 dark:text-gray-200">
+<div class="flex h-screen w-full flex-col">
+<header class="flex h-16 items-center justify-between whitespace-nowrap border-b border-gray-200 dark:border-gray-700/50 px-4 sm:px-6 lg:px-8 shrink-0">
+<div class="flex items-center gap-4 text-gray-900 dark:text-white">
+<div class="size-7 text-primary">
+<svg fill="none" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+<path d="M36.7273 44C33.9891 44 31.6043 39.8386 30.3636 33.69C29.123 39.8386 26.7382 44 24 44C21.2618 44 18.877 39.8386 17.6364 33.69C16.3957 39.8386 14.0109 44 11.2727 44C7.25611 44 4 35.0457 4 24C4 12.9543 7.25611 4 11.2727 4C14.0109 4 16.3957 8.16144 17.6364 14.31C18.877 8.16144 21.2618 4 24 4C26.7382 4 29.123 8.16144 30.3636 14.31C31.6043 8.16144 33.9891 4 36.7273 4C40.7439 4 44 12.9543 44 24C44 35.0457 40.7439 44 36.7273 44Z" fill="currentColor"></path>
+</svg>
+</div>
+<h1 class="text-xl font-bold leading-tight tracking-[-0.015em]">多功能工具站</h1>
+</div>
+</header>
+<div class="flex h-full min-h-0 grow">
+<aside class="w-64 shrink-0 border-r border-gray-200 dark:border-gray-700/50 flex flex-col p-4">
+<h2 class="text-xs font-semibold uppercase text-gray-400 dark:text-gray-500 tracking-wider mb-3 px-2">工具列表</h2>
+<nav class="flex flex-col gap-1">
+<a class="flex items-center gap-3 rounded-lg bg-primary/10 px-3 py-2.5 text-sm font-medium text-primary dark:bg-primary/20" href="#">
+<span class="material-symbols-outlined text-xl">translate</span>
+<span>在线翻译</span>
+</a>
+<a class="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800/50" href="#">
+<span class="material-symbols-outlined text-xl">image</span>
+<span>图片格式转换</span>
+</a>
+<a class="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800/50" href="#">
+<span class="material-symbols-outlined text-xl">qr_code_2</span>
+<span>二维码生成器</span>
+</a>
+<a class="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800/50" href="#">
+<span class="material-symbols-outlined text-xl">fingerprint</span>
+<span>MD5 哈希生成</span>
+</a>
+</nav>
+</aside>
+<div class="flex-1 overflow-auto">
+<main class="flex w-full flex-col items-center px-4 py-10 sm:px-6 lg:px-8">
+<div class="flex w-full max-w-5xl flex-col items-center gap-2 text-center mb-8">
+<p class="text-3xl font-black leading-tight tracking-tighter text-gray-900 dark:text-white sm:text-4xl">在线翻译</p>
+<p class="text-base font-normal text-gray-500 dark:text-gray-400">在不同语言之间即时翻译文本。</p>
+</div>
+<div class="w-full max-w-5xl rounded-xl border border-gray-200 dark:border-gray-700/50 bg-white dark:bg-gray-800/20 shadow-sm">
+<div class="flex flex-col sm:flex-row items-center justify-between gap-2 border-b border-gray-200 dark:border-gray-700/50 p-3">
+<div class="flex w-full items-center gap-2">
+<button class="flex-1 rounded-lg px-4 py-2.5 text-sm font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700/50 focus:outline-none focus:ring-2 focus:ring-primary/50">自动检测语言</button>
+<button class="rounded-lg p-2 text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700/50 focus:outline-none focus:ring-2 focus:ring-primary/50">
+<span class="material-symbols-outlined text-xl">swap_horiz</span>
+</button>
+<button class="flex-1 rounded-lg px-4 py-2.5 text-sm font-medium text-primary bg-primary/10 dark:bg-primary/20">中文</button>
+</div>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2">
+<div class="relative flex flex-col p-4">
+<textarea class="form-textarea flex-1 resize-none border-0 bg-transparent p-2 text-base font-normal text-gray-800 dark:text-gray-200 placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:outline-none focus:ring-0" placeholder="输入文本..." rows="8"></textarea>
+<div class="flex items-center justify-between pt-2">
+<p class="text-xs text-gray-400 dark:text-gray-500">0 / 5000</p>
+<button class="rounded-full p-2 text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700/50">
+<span class="material-symbols-outlined text-base">close</span>
+</button>
+</div>
+</div>
+<div class="relative flex flex-col border-t md:border-t-0 md:border-l border-gray-200 dark:border-gray-700/50 p-4 bg-gray-50/50 dark:bg-gray-800/30">
+<div class="flex-1 p-2 text-base font-normal text-gray-500 dark:text-gray-400">
+                                翻译结果将显示在此处。
+                            </div>
+<div class="flex items-center justify-end pt-2">
+<button class="rounded-full p-2 text-gray-500 hover:bg-gray-200 dark:text-gray-400 dark:hover:bg-gray-700/50">
+<span class="material-symbols-outlined text-base">content_copy</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+<div class="mt-6">
+<button class="flex items-center justify-center gap-2 rounded-lg bg-primary px-6 py-3 text-base font-medium text-white shadow-sm hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:ring-offset-2 dark:focus:ring-offset-background-dark">
+<span>翻译</span>
+<span class="material-symbols-outlined text-xl">arrow_forward</span>
+</button>
+</div>
+<p class="mt-4 text-xs text-gray-400 dark:text-gray-500">由强大的翻译API驱动</p>
+</main>
+<footer class="w-full max-w-5xl border-t border-gray-200 dark:border-gray-700/50 px-4 py-6 sm:px-6 lg:px-8 mt-auto">
+<div class="flex flex-col items-center justify-between gap-4 text-sm text-gray-500 dark:text-gray-400 sm:flex-row">
+<p>© 2024 多功能工具站. 版权所有.</p>
+<div class="flex gap-4">
+<a class="hover:text-primary" href="#">关于我们</a>
+<a class="hover:text-primary" href="#">隐私政策</a>
+<a class="hover:text-primary" href="#">服务条款</a>
+</div>
+</div>
+</footer>
+</div>
+</div>
+</div>
+</body></html>

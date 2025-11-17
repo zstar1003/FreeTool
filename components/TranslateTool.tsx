@@ -6,7 +6,8 @@ const TranslateTool: React.FC = () => {
     const [translatedText, setTranslatedText] = useState<string>('');
     const [isLoading, setIsLoading] = useState<boolean>(false);
     const [error, setError] = useState<string | null>(null);
-    const [detectedLang, setDetectedLang] = useState<string>('');
+    const [detectedLang, setDetectedLang] = useState<string>('自动检测语言');
+    const [targetLang, setTargetLang] = useState<string>('中文');
 
     const handleTranslate = useCallback(async () => {
         if (!inputText.trim()) {
@@ -16,12 +17,12 @@ const TranslateTool: React.FC = () => {
         setIsLoading(true);
         setError(null);
         setTranslatedText('');
-        setDetectedLang('');
 
         try {
             const result = await translateText(inputText);
             setTranslatedText(result.translatedText);
             setDetectedLang(result.detectedLang);
+            setTargetLang(result.detectedLang === '中文' ? '英语' : '中文');
         } catch (err) {
             console.error(err);
             setError("翻译失败,请稍后重试。");
@@ -43,75 +44,105 @@ const TranslateTool: React.FC = () => {
     const handleSwap = useCallback(() => {
         setInputText(translatedText);
         setTranslatedText('');
-        setDetectedLang('');
-    }, [translatedText]);
+        const temp = detectedLang;
+        setDetectedLang(targetLang);
+        setTargetLang(temp);
+    }, [translatedText, detectedLang, targetLang]);
+
+    const handleClear = useCallback(() => {
+        setInputText('');
+    }, []);
 
     return (
-        <div className="max-w-4xl mx-auto flex flex-col gap-8">
-            <header>
-                <h1 className="text-text-light dark:text-text-dark text-4xl font-black leading-tight tracking-[-0.033em]">在线翻译</h1>
-                <p className="text-subtle-light dark:text-subtle-dark text-base font-normal leading-normal mt-2">
-                    自动识别语言,智能翻译成中文或英文。支持多种语言互译。
-                </p>
-            </header>
-
-            <div className="flex items-center gap-4">
-                <button
-                    onClick={handleTranslate}
-                    disabled={isLoading || !inputText.trim()}
-                    className="flex items-center justify-center gap-2 px-6 py-2.5 bg-primary text-white rounded-lg font-medium shadow-sm hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                    {isLoading ? <div className="spinner"></div> : <span className="material-symbols-outlined text-xl">translate</span>}
-                    <span>{isLoading ? "翻译中..." : "翻译"}</span>
-                </button>
-                {translatedText && (
-                    <button
-                        onClick={handleSwap}
-                        className="flex items-center justify-center gap-2 px-4 py-2 bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-lg font-medium hover:bg-border-light dark:hover:bg-border-dark"
-                    >
-                        <span className="material-symbols-outlined text-xl">swap_horiz</span>
-                        <span>互换</span>
-                    </button>
-                )}
+        <div className="flex w-full flex-col items-center px-4 py-10 sm:px-6 lg:px-8">
+            <div className="flex w-full max-w-5xl flex-col items-center gap-2 text-center mb-8">
+                <p className="text-3xl font-black leading-tight tracking-tighter text-gray-900 dark:text-white sm:text-4xl">在线翻译</p>
+                <p className="text-base font-normal text-gray-500 dark:text-gray-400">在不同语言之间即时翻译文本。</p>
             </div>
 
-            {error && <p className="text-red-500 bg-red-100 dark:bg-red-900/50 p-3 rounded-lg">{error}</p>}
-
-            {detectedLang && (
-                <p className="text-subtle-light dark:text-subtle-dark text-sm">
-                    检测到语言: <span className="font-semibold">{detectedLang}</span>
-                </p>
+            {error && (
+                <div className="w-full max-w-5xl mb-4">
+                    <p className="text-red-500 bg-red-100 dark:bg-red-900/50 p-3 rounded-lg">{error}</p>
+                </div>
             )}
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <div>
-                    <label className="flex flex-col">
-                        <p className="text-text-light dark:text-text-dark text-base font-medium leading-normal pb-2">原文</p>
+            <div className="w-full max-w-5xl rounded-xl border border-gray-200 dark:border-gray-700/50 bg-white dark:bg-gray-800/20 shadow-sm">
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-2 border-b border-gray-200 dark:border-gray-700/50 p-3">
+                    <div className="flex w-full items-center gap-2">
+                        <button className="flex-1 rounded-lg px-4 py-2.5 text-sm font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700/50 focus:outline-none focus:ring-2 focus:ring-primary/50">
+                            {detectedLang}
+                        </button>
+                        <button
+                            onClick={handleSwap}
+                            disabled={!translatedText}
+                            className="rounded-lg p-2 text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700/50 focus:outline-none focus:ring-2 focus:ring-primary/50 disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                            <span className="material-symbols-outlined text-xl">swap_horiz</span>
+                        </button>
+                        <button className="flex-1 rounded-lg px-4 py-2.5 text-sm font-medium text-primary bg-primary/10 dark:bg-primary/20">
+                            {targetLang}
+                        </button>
+                    </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2">
+                    <div className="relative flex flex-col p-4">
                         <textarea
                             value={inputText}
                             onChange={(e) => setInputText(e.target.value)}
-                            className="form-input flex w-full min-w-0 flex-1 resize-y rounded-lg text-text-light dark:text-text-dark focus:outline-0 focus:ring-2 focus:ring-primary/20 border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark focus:border-primary min-h-64 placeholder:text-subtle-light dark:placeholder:text-subtle-dark p-[15px] text-base leading-normal"
-                            placeholder="请输入需要翻译的文本..."
+                            className="form-textarea flex-1 resize-none border-0 bg-transparent p-2 text-base font-normal text-gray-800 dark:text-gray-200 placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:outline-none focus:ring-0"
+                            placeholder="输入文本..."
+                            rows={8}
                         ></textarea>
-                    </label>
-                </div>
-                <div>
-                    <div className="flex justify-between items-center mb-2">
-                        <h3 className="text-text-light dark:text-text-dark text-base font-medium leading-normal">译文</h3>
-                        <button
-                            onClick={handleCopy}
-                            disabled={!translatedText}
-                            className="flex items-center gap-2 px-4 py-2 bg-primary/10 text-primary rounded-lg text-sm font-medium hover:bg-primary/20 disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                            <span className="material-symbols-outlined text-lg">content_copy</span>
-                            <span>复制</span>
-                        </button>
+                        <div className="flex items-center justify-between pt-2">
+                            <p className="text-xs text-gray-400 dark:text-gray-500">{inputText.length} / 5000</p>
+                            <button
+                                onClick={handleClear}
+                                className="rounded-full p-2 text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700/50"
+                            >
+                                <span className="material-symbols-outlined text-base">close</span>
+                            </button>
+                        </div>
                     </div>
-                    <div className="relative bg-surface-light dark:bg-surface-dark rounded-lg border border-border-light dark:border-border-dark min-h-64 p-4 text-base overflow-y-auto">
-                        <p className="whitespace-pre-wrap">{translatedText || <span className="text-subtle-light dark:text-subtle-dark">翻译结果将显示在此处。</span>}</p>
+
+                    <div className="relative flex flex-col border-t md:border-t-0 md:border-l border-gray-200 dark:border-gray-700/50 p-4 bg-gray-50/50 dark:bg-gray-800/30">
+                        <div className="flex-1 p-2 text-base font-normal text-gray-800 dark:text-gray-200 whitespace-pre-wrap">
+                            {translatedText || <span className="text-gray-500 dark:text-gray-400">翻译结果将显示在此处。</span>}
+                        </div>
+                        <div className="flex items-center justify-end pt-2">
+                            <button
+                                onClick={handleCopy}
+                                disabled={!translatedText}
+                                className="rounded-full p-2 text-gray-500 hover:bg-gray-200 dark:text-gray-400 dark:hover:bg-gray-700/50 disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                <span className="material-symbols-outlined text-base">content_copy</span>
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
+
+            <div className="mt-6">
+                <button
+                    onClick={handleTranslate}
+                    disabled={isLoading || !inputText.trim()}
+                    className="flex items-center justify-center gap-2 rounded-lg bg-primary px-6 py-3 text-base font-medium text-white shadow-sm hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                    {isLoading ? (
+                        <>
+                            <div className="spinner"></div>
+                            <span>翻译中...</span>
+                        </>
+                    ) : (
+                        <>
+                            <span>翻译</span>
+                            <span className="material-symbols-outlined text-xl">arrow_forward</span>
+                        </>
+                    )}
+                </button>
+            </div>
+
+            <p className="mt-4 text-xs text-gray-400 dark:text-gray-500">由强大的翻译API驱动</p>
         </div>
     );
 };
