@@ -1,13 +1,15 @@
-// 使用 Google Translate API (通过公共代理)
-// 注意:这是使用非官方API,生产环境建议使用官方 Google Cloud Translation API
+// Google Translate API (通过公共API代理)
 
 interface TranslateResult {
     translatedText: string;
     detectedLang: string;
+    sourceLangCode: string;
+    targetLangCode: string;
 }
 
 // 语言代码映射
-const LANG_MAP: Record<string, string> = {
+const LANG_NAME_MAP: Record<string, string> = {
+    'zh': '中文',
     'zh-CN': '中文',
     'zh-TW': '繁体中文',
     'en': '英语',
@@ -20,97 +22,110 @@ const LANG_MAP: Record<string, string> = {
     'ar': '阿拉伯语',
     'pt': '葡萄牙语',
     'it': '意大利语',
+    'auto': '自动检测',
 };
 
 // 检测语言是否为中文
 function isChinese(text: string): boolean {
     const chineseRegex = /[\u4e00-\u9fa5]/;
-    return chineseRegex.test(text);
+    const chineseCount = (text.match(/[\u4e00-\u9fa5]/g) || []).length;
+    const totalLength = text.replace(/\s/g, '').length;
+    return chineseCount / totalLength > 0.3;
 }
 
-// 使用 MyMemory Translation API (免费,无需API密钥)
-async function translateWithMyMemory(text: string, sourceLang: string, targetLang: string): Promise<string> {
-    const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=${sourceLang}|${targetLang}`;
-
+// 使用 Google Translate API (通过translate.googleapis.com的免费接口)
+async function translateWithGoogle(text: string, targetLang: string): Promise<{ translatedText: string; detectedLang: string }> {
     try {
+        const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=${targetLang}&dt=t&q=${encodeURIComponent(text)}`;
+
+        const response = await fetch(url);
+
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const data = await response.json();
+
+        // Google翻译API返回格式: [[["翻译结果","原文",null,null,10]],null,"en",...]
+        if (!data || !data[0] || !data[0][0]) {
+            throw new Error('Invalid response format');
+        }
+
+        const translatedText = data[0].map((item: any[]) => item[0]).join('');
+        const detectedLangCode = data[2] || 'auto';
+
+        return {
+            translatedText,
+            detectedLang: LANG_NAME_MAP[detectedLangCode] || detectedLangCode
+        };
+    } catch (error) {
+        console.error('Google Translate error:', error);
+        throw error;
+    }
+}
+
+// 使用 MyMemory Translation API (免费备用)
+async function translateWithMyMemory(text: string, sourceLang: string, targetLang: string): Promise<string> {
+    try {
+        const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=${sourceLang}|${targetLang}`;
+
         const response = await fetch(url);
         const data = await response.json();
 
         if (data.responseStatus === 200 && data.responseData) {
             return data.responseData.translatedText;
         }
-        throw new Error('Translation failed');
+        throw new Error('MyMemory translation failed');
     } catch (error) {
         console.error('MyMemory translation error:', error);
         throw error;
     }
 }
 
-// 使用 LibreTranslate API (开源免费翻译API)
-async function translateWithLibre(text: string, sourceLang: string, targetLang: string): Promise<string> {
-    const url = 'https://libretranslate.de/translate';
-
-    try {
-        const response = await fetch(url, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                q: text,
-                source: sourceLang === 'auto' ? 'auto' : sourceLang,
-                target: targetLang,
-                format: 'text'
-            })
-        });
-
-        const data = await response.json();
-
-        if (data.translatedText) {
-            return data.translatedText;
-        }
-        throw new Error('Translation failed');
-    } catch (error) {
-        console.error('LibreTranslate error:', error);
-        throw error;
-    }
-}
-
-export async function translateText(text: string): Promise<TranslateResult> {
+export async function translateText(text: string, userSourceLang: string = 'auto', userTargetLang: string = 'auto'): Promise<TranslateResult> {
     if (!text.trim()) {
         throw new Error('请输入需要翻译的文本');
     }
 
-    // 自动检测语言并决定目标语言
-    const containsChinese = isChinese(text);
-    const sourceLang = 'auto';
-    const targetLang = containsChinese ? 'en' : 'zh';
+    let sourceLangCode = userSourceLang;
+    let targetLangCode = userTargetLang;
 
-    let detectedLangCode = containsChinese ? 'zh-CN' : 'en';
+    // 如果是自动模式,智能判断源语言和目标语言
+    if (userSourceLang === 'auto' || userTargetLang === 'auto') {
+        const containsChinese = isChinese(text);
+        if (containsChinese) {
+            sourceLangCode = 'zh';
+            targetLangCode = userTargetLang === 'auto' ? 'en' : userTargetLang;
+        } else {
+            sourceLangCode = 'en';
+            targetLangCode = userTargetLang === 'auto' ? 'zh' : userTargetLang;
+        }
+    }
+
     let translatedText = '';
+    let detectedLang = LANG_NAME_MAP[sourceLangCode] || sourceLangCode;
 
     try {
-        // 优先尝试 LibreTranslate (更稳定)
-        translatedText = await translateWithLibre(text, sourceLang, targetLang);
-
-        // 如果翻译失败或结果为空,尝试备用方案
-        if (!translatedText || translatedText === text) {
-            translatedText = await translateWithMyMemory(text, sourceLang, targetLang);
-        }
+        // 优先使用 Google Translate
+        const result = await translateWithGoogle(text, targetLangCode);
+        translatedText = result.translatedText;
+        detectedLang = result.detectedLang;
     } catch (error) {
-        console.error('Primary translation failed, trying fallback:', error);
+        console.error('Google Translate failed, trying MyMemory:', error);
 
         try {
             // 降级到 MyMemory
-            translatedText = await translateWithMyMemory(text, sourceLang, targetLang);
+            translatedText = await translateWithMyMemory(text, sourceLangCode, targetLangCode);
         } catch (fallbackError) {
             console.error('All translation methods failed:', fallbackError);
-            throw new Error('翻译服务暂时不可用,请稍后重试');
+            throw new Error('翻译服务暂时不可用,请检查网络连接或稍后重试');
         }
     }
 
     return {
         translatedText,
-        detectedLang: LANG_MAP[detectedLangCode] || detectedLangCode
+        detectedLang,
+        sourceLangCode,
+        targetLangCode
     };
 }
