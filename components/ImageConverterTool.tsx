@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 
 type ImageFormat = 'png' | 'jpeg' | 'webp' | 'gif' | 'bmp';
 
@@ -30,10 +30,65 @@ const ImageConverterTool: React.FC = () => {
 
         const reader = new FileReader();
         reader.onload = (e) => {
-            setPreviewUrl(e.target?.result as string);
+            const dataUrl = e.target?.result as string;
+            setPreviewUrl(dataUrl);
+            // 自动触发转换
+            performConversion(dataUrl, targetFormat, quality);
         };
         reader.readAsDataURL(file);
+    }, [targetFormat, quality]);
+
+    const performConversion = useCallback((imageDataUrl: string, format: ImageFormat, qualityValue: number) => {
+        setIsConverting(true);
+        setError(null);
+
+        const img = new Image();
+        img.onload = () => {
+            const canvas = document.createElement('canvas');
+            canvas.width = img.width;
+            canvas.height = img.height;
+
+            const ctx = canvas.getContext('2d');
+            if (!ctx) {
+                setError('Canvas 上下文创建失败');
+                setIsConverting(false);
+                return;
+            }
+
+            ctx.drawImage(img, 0, 0);
+
+            const mimeType = `image/${format === 'jpeg' ? 'jpeg' : format}`;
+            // 为支持压缩的格式设置质量参数
+            const useQuality = format === 'jpeg' || format === 'webp';
+
+            canvas.toBlob((blob) => {
+                if (!blob) {
+                    setError('图片转换失败');
+                    setIsConverting(false);
+                    return;
+                }
+
+                setConvertedSize(blob.size);
+                const url = URL.createObjectURL(blob);
+                setConvertedUrl(url);
+                setIsConverting(false);
+            }, mimeType, useQuality ? qualityValue : undefined);
+        };
+
+        img.onerror = () => {
+            setError('图片加载失败');
+            setIsConverting(false);
+        };
+
+        img.src = imageDataUrl;
     }, []);
+
+    // 当格式或质量改变时,自动重新转换
+    useEffect(() => {
+        if (previewUrl) {
+            performConversion(previewUrl, targetFormat, quality);
+        }
+    }, [targetFormat, quality, previewUrl, performConversion]);
 
     const handleConvert = useCallback(async () => {
         if (!selectedFile || !previewUrl) {
@@ -41,55 +96,8 @@ const ImageConverterTool: React.FC = () => {
             return;
         }
 
-        setIsConverting(true);
-        setError(null);
-
-        try {
-            const img = new Image();
-            img.onload = () => {
-                const canvas = document.createElement('canvas');
-                canvas.width = img.width;
-                canvas.height = img.height;
-
-                const ctx = canvas.getContext('2d');
-                if (!ctx) {
-                    setError('Canvas 上下文创建失败');
-                    setIsConverting(false);
-                    return;
-                }
-
-                ctx.drawImage(img, 0, 0);
-
-                const mimeType = `image/${targetFormat === 'jpeg' ? 'jpeg' : targetFormat}`;
-                // 为支持压缩的格式设置质量参数
-                const useQuality = targetFormat === 'jpeg' || targetFormat === 'webp';
-
-                canvas.toBlob((blob) => {
-                    if (!blob) {
-                        setError('图片转换失败');
-                        setIsConverting(false);
-                        return;
-                    }
-
-                    setConvertedSize(blob.size);
-                    const url = URL.createObjectURL(blob);
-                    setConvertedUrl(url);
-                    setIsConverting(false);
-                }, mimeType, useQuality ? quality : undefined);
-            };
-
-            img.onerror = () => {
-                setError('图片加载失败');
-                setIsConverting(false);
-            };
-
-            img.src = previewUrl;
-        } catch (err) {
-            console.error(err);
-            setError('转换过程中出现错误');
-            setIsConverting(false);
-        }
-    }, [selectedFile, previewUrl, targetFormat, quality]);
+        performConversion(previewUrl, targetFormat, quality);
+    }, [selectedFile, previewUrl, targetFormat, quality, performConversion]);
 
     const formatFileSize = (bytes: number): string => {
         if (bytes === 0) return '0 B';
@@ -198,11 +206,7 @@ const ImageConverterTool: React.FC = () => {
                                                     type="radio"
                                                     value={format}
                                                     checked={targetFormat === format}
-                                                    onChange={(e) => {
-                                                        setTargetFormat(e.target.value as ImageFormat);
-                                                        setConvertedUrl('');
-                                                        setConvertedSize(0);
-                                                    }}
+                                                    onChange={(e) => setTargetFormat(e.target.value as ImageFormat)}
                                                 />
                                             </label>
                                         ))}
@@ -221,11 +225,7 @@ const ImageConverterTool: React.FC = () => {
                                             max="1"
                                             step="0.05"
                                             value={quality}
-                                            onChange={(e) => {
-                                                setQuality(parseFloat(e.target.value));
-                                                setConvertedUrl('');
-                                                setConvertedSize(0);
-                                            }}
+                                            onChange={(e) => setQuality(parseFloat(e.target.value))}
                                             className="w-full h-2 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer accent-primary"
                                         />
                                         <p className="text-xs text-gray-500 dark:text-gray-400">💡 降低质量可以减小文件大小,建议值: 70-85%</p>
@@ -253,8 +253,8 @@ const ImageConverterTool: React.FC = () => {
                                 )}
 
                                 <button
-                                    onClick={convertedUrl ? handleDownload : handleConvert}
-                                    disabled={isConverting}
+                                    onClick={handleDownload}
+                                    disabled={!convertedUrl || isConverting}
                                     className="flex h-12 w-full cursor-pointer items-center justify-center gap-2 overflow-hidden rounded-lg bg-primary px-6 text-base font-bold text-white shadow-lg shadow-primary/20 transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50 mt-auto"
                                 >
                                     {isConverting ? (
@@ -262,15 +262,10 @@ const ImageConverterTool: React.FC = () => {
                                             <div className="spinner"></div>
                                             <span className="truncate">转换中...</span>
                                         </>
-                                    ) : convertedUrl ? (
+                                    ) : (
                                         <>
                                             <span className="material-symbols-outlined">download</span>
                                             <span className="truncate">下载转换后的图片</span>
-                                        </>
-                                    ) : (
-                                        <>
-                                            <span className="material-symbols-outlined">transform</span>
-                                            <span className="truncate">转换图片</span>
                                         </>
                                     )}
                                 </button>
