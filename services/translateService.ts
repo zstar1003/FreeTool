@@ -33,12 +33,14 @@ function isChinese(text: string): boolean {
     return chineseCount / totalLength > 0.3;
 }
 
-// 使用 Google Translate API (通过translate.googleapis.com的免费接口)
+// 使用 Google Translate API (通过 CORS 代理)
 async function translateWithGoogle(text: string, targetLang: string): Promise<{ translatedText: string; detectedLang: string }> {
     try {
-        const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=${targetLang}&dt=t&q=${encodeURIComponent(text)}`;
+        // 使用 CORS 代理访问 Google Translate API
+        const apiUrl = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=${targetLang}&dt=t&q=${encodeURIComponent(text)}`;
+        const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(apiUrl)}`;
 
-        const response = await fetch(url);
+        const response = await fetch(proxyUrl);
 
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
