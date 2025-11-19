@@ -1,0 +1,134 @@
+
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>FreeTool 工具箱 - 在线小工具</title>
+    <link rel="icon" type="image/png" href="/FreeTool/logo.png" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;900&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet" />
+    <!-- Highlight.js for syntax highlighting -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github.min.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css" media="(prefers-color-scheme: dark)" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <!-- KaTeX for math formula rendering -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css" />
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <!-- gif.js for GIF compression -->
+    <script src="https://cdn.jsdelivr.net/npm/gif.js@0.2.0/dist/gif.js"></script>
+    <!-- DataGridXL for spreadsheet-like editing -->
+    <link rel="stylesheet" href="https://code.datagridxl.com/datagridxl.css" />
+    <script defer src="https://code.datagridxl.com/datagridxl.js"></script>
+    <!-- Tailwind CSS -->
+    <script>
+        window.tailwindConfig = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        primary: "#607AFB",
+                        "background-light": "#f5f6f8",
+                        "background-dark": "#0f1323",
+                        "text-light": "#1e293b",
+                        "text-dark": "#e2e8f0",
+                        "subtle-light": "#64748b",
+                        "subtle-dark": "#94a3b8",
+                        "border-light": "#e2e8f0",
+                        "border-dark": "#334155",
+                        "surface-light": "#ffffff",
+                        "surface-dark": "#1e293b"
+                    },
+                    fontFamily: {
+                        display: "Inter, sans-serif",
+                        mono: "'Fira Code', 'JetBrains Mono', monospace",
+                    },
+                    borderRadius: {
+                        DEFAULT: "0.25rem",
+                        lg: "0.5rem",
+                        xl: "0.75rem",
+                        full: "9999px"
+                    }
+                }
+            }
+        };
+    </script>
+    <script src="https://unpkg.com/tailwindcss-cdn@3.4.1/tailwindcss.js"></script>
+    <style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        /* Simple spinner for loading state */
+        .spinner {
+            border: 2px solid rgba(255,255,255,0.3);
+            border-radius: 50%;
+            border-top: 2px solid #fff;
+            width: 16px;
+            height: 16px;
+            -webkit-animation: spin 1s linear infinite;
+            animation: spin 1s linear infinite;
+        }
+        @-webkit-keyframes spin {
+            0% { -webkit-transform: rotate(0deg); }
+            100% { -webkit-transform: rotate(360deg); }
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        /* Fade in down animation for notifications */
+        @keyframes fade-in-down {
+            0% {
+                opacity: 0;
+                transform: translate(-50%, -20px);
+            }
+            100% {
+                opacity: 1;
+                transform: translate(-50%, 0);
+            }
+        }
+        .animate-fade-in-down {
+            animation: fade-in-down 0.3s ease-out forwards;
+        }
+        /* Fade out up animation for notifications */
+        @keyframes fade-out-up {
+            0% {
+                opacity: 1;
+                transform: translate(-50%, 0);
+            }
+            100% {
+                opacity: 0;
+                transform: translate(-50%, -20px);
+            }
+        }
+        .animate-fade-out-up {
+            animation: fade-out-up 0.3s ease-in forwards;
+        }
+    </style>
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-KN165LH32Y"></script>
+    <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+
+    gtag('config', 'G-KN165LH32Y');
+    </script>
+
+    <script type="importmap">
+    {
+    "imports": {
+        "@google/genai": "https://aistudiocdn.com/@google/genai@^1.29.1",
+        "react/": "https://aistudiocdn.com/react@^19.2.0/",
+        "react": "https://aistudiocdn.com/react@^19.2.0",
+        "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.0/"
+    }
+    }
+    </script>
+  <script type="module" crossorigin src="/FreeTool/assets/index-nJwuNlK9.js"></script>
+  <link rel="stylesheet" crossorigin href="/FreeTool/assets/index-CtX1EAIF.css">
+</head>
+<body class="font-display bg-background-light dark:bg-background-dark text-text-light dark:text-text-dark">
+    <div id="root"></div>
+</body>
+</html>
