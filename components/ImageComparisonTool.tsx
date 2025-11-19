@@ -227,9 +227,12 @@ const ImageComparisonTool: React.FC = () => {
         if (!canvas) return { x: 0, y: 0 };
 
         const rect = canvas.getBoundingClientRect();
+        const scaleX = canvas.width / rect.width;
+        const scaleY = canvas.height / rect.height;
+
         return {
-            x: e.clientX - rect.left,
-            y: e.clientY - rect.top,
+            x: (e.clientX - rect.left) * scaleX,
+            y: (e.clientY - rect.top) * scaleY,
         };
     };
 
@@ -260,16 +263,19 @@ const ImageComparisonTool: React.FC = () => {
                 ctx.font = `${textLayer.fontSize}px ${textLayer.fontFamily}`;
                 const metrics = ctx.measureText(textLayer.text);
 
-                // Text is drawn at (textLayer.x, textLayer.y) with fillText at (0, 0)
-                // So the hit box should be centered around the text position
-                const textWidth = metrics.width;
-                const textHeight = textLayer.fontSize;
+                // Text is drawn with translate(x, y) then fillText(0, 0)
+                // The text baseline is at (x, y), text extends upward by fontSize
+                // Match the selection box: strokeRect(-5, -fontSize - 5, width + 10, fontSize + 10)
+                const hitX = textLayer.x - 5;
+                const hitY = textLayer.y - textLayer.fontSize - 5;
+                const hitWidth = metrics.width + 10;
+                const hitHeight = textLayer.fontSize + 10;
 
                 if (
-                    x >= textLayer.x - 5 &&
-                    x <= textLayer.x + textWidth + 5 &&
-                    y >= textLayer.y - textHeight &&
-                    y <= textLayer.y + 5
+                    x >= hitX &&
+                    x <= hitX + hitWidth &&
+                    y >= hitY &&
+                    y <= hitY + hitHeight
                 ) {
                     return layer;
                 }
