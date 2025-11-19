@@ -5,9 +5,17 @@ import CodeHighlightTool from './components/CodeHighlightTool';
 import TextFormatterTool from './components/TextFormatterTool';
 import JsonFormatterTool from './components/JsonFormatterTool';
 import MathFormulaEditor from './components/MathFormulaEditor';
+import TableConverter from './components/TableConverter';
 import BottomNavBar from './components/BottomNavBar';
 
-type ToolType = 'translate' | 'image-converter' | 'code-highlight' | 'text-formatter' | 'json-formatter' | 'math-formula';
+type ToolType =
+    | 'translate'
+    | 'image-converter'
+    | 'code-highlight'
+    | 'text-formatter'
+    | 'json-formatter'
+    | 'math-formula'
+    | 'table-converter';
 
 interface Tool {
     id: ToolType;
@@ -52,6 +60,12 @@ const TOOLS: Tool[] = [
         name: '图片格式转换',
         icon: 'image',
         component: ImageConverterTool,
+    },
+    {
+        id: 'table-converter',
+        name: '表格格式转换',
+        icon: 'table_chart',
+        component: TableConverter,
     },
 ];
 

@@ -1,6 +1,13 @@
 import React from 'react';
 
-type ToolType = 'translate' | 'image-converter' | 'code-highlight' | 'text-formatter' | 'json-formatter' | 'math-formula';
+type ToolType =
+    | 'translate'
+    | 'image-converter'
+    | 'code-highlight'
+    | 'text-formatter'
+    | 'json-formatter'
+    | 'math-formula'
+    | 'table-converter';
 
 interface Tool {
     id: ToolType;
@@ -38,6 +45,11 @@ const TOOLS: Tool[] = [
         id: 'image-converter',
         name: '图片',
         icon: 'image',
+    },
+    {
+        id: 'table-converter',
+        name: '表格',
+        icon: 'table_chart',
     },
 ];
 
