@@ -124,6 +124,27 @@ const ImageEditorTool: React.FC = () => {
         }
     };
 
+    // 监听工具切换，切换到裁剪工具时初始化裁剪框
+    useEffect(() => {
+        if (activeTool === 'crop' && !cropRect) {
+            const canvas = canvasRef.current;
+            if (canvas) {
+                // 初始化一个默认的裁剪框（画布中央，80%大小）
+                const padding = Math.min(canvas.width, canvas.height) * 0.1;
+                setCropRect({
+                    x: padding,
+                    y: padding,
+                    width: canvas.width - padding * 2,
+                    height: canvas.height - padding * 2,
+                });
+            }
+        } else if (activeTool !== 'crop' && cropRect) {
+            // 切换到其他工具时清除裁剪框
+            setCropRect(null);
+            restoreFromHistory();
+        }
+    }, [activeTool]);
+
     // 获取鼠标在canvas上的坐标
     const getCanvasPoint = (e: React.MouseEvent<HTMLCanvasElement>): Point => {
         const canvas = canvasRef.current;
@@ -455,6 +476,10 @@ const ImageEditorTool: React.FC = () => {
         const { x, y, width, height } = cropRect;
 
         if (width > 10 && height > 10) {
+            // 先恢复历史状态，移除绿色裁剪框
+            restoreFromHistory();
+
+            // 然后获取裁剪区域的图像数据
             const imageData = ctx.getImageData(x, y, width, height);
             canvas.width = width;
             canvas.height = height;
