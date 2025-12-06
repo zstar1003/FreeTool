@@ -10,6 +10,7 @@ import XmlFormatterTool from './components/XmlFormatterTool';
 import MathFormulaEditor from './components/MathFormulaEditor';
 import TableConverter from './components/TableConverter';
 import VideoAspectConverter from './components/VideoAspectConverter';
+import TextDiffTool from './components/TextDiffTool';
 import BottomNavBar from './components/BottomNavBar';
 
 // 获取资源路径的辅助函数
@@ -29,7 +30,8 @@ type ToolType =
     | 'xml-formatter'
     | 'math-formula'
     | 'table-converter'
-    | 'video-aspect-converter';
+    | 'video-aspect-converter'
+    | 'text-diff';
 
 interface Tool {
     id: ToolType;
@@ -104,6 +106,12 @@ const TOOLS: Tool[] = [
         name: '视频比例转换',
         icon: 'aspect_ratio',
         component: VideoAspectConverter,
+    },
+    {
+        id: 'text-diff',
+        name: '文本差异对比',
+        icon: 'compare',
+        component: TextDiffTool,
     },
 ];
 
