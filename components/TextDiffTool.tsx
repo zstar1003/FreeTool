@@ -80,7 +80,7 @@ const TextDiffTool: React.FC = () => {
         setDiffResult(diff);
     }, [leftText, rightText, calculateDiff]);
 
-    // 同步滚动（只同步垂直滚动，横向滚动各自独立）
+    // 同步滚动（同步垂直和横向滚动）
     const handleScroll = useCallback((side: 'left' | 'right') => {
         if (side === 'left' && leftEditorRef.current && leftBackgroundRef.current && leftLineNumberRef.current) {
             const scrollTop = leftEditorRef.current.scrollTop;
@@ -98,9 +98,10 @@ const TextDiffTool: React.FC = () => {
                 backgroundContent.style.transform = `translate(-${scrollLeft}px, -${scrollTop}px)`;
             }
 
-            // 同步右侧的垂直滚动
+            // 同步右侧的垂直和横向滚动
             if (rightEditorRef.current && rightBackgroundRef.current && rightLineNumberRef.current) {
                 rightEditorRef.current.scrollTop = scrollTop;
+                rightEditorRef.current.scrollLeft = scrollLeft;
 
                 const rightLineNumberContent = rightLineNumberRef.current.firstChild as HTMLElement;
                 if (rightLineNumberContent) {
@@ -109,8 +110,7 @@ const TextDiffTool: React.FC = () => {
 
                 const rightBackgroundContent = rightBackgroundRef.current.firstChild as HTMLElement;
                 if (rightBackgroundContent) {
-                    const rightScrollLeft = rightEditorRef.current.scrollLeft;
-                    rightBackgroundContent.style.transform = `translate(-${rightScrollLeft}px, -${scrollTop}px)`;
+                    rightBackgroundContent.style.transform = `translate(-${scrollLeft}px, -${scrollTop}px)`;
                 }
             }
         } else if (side === 'right' && rightEditorRef.current && rightBackgroundRef.current && rightLineNumberRef.current) {
@@ -129,9 +129,10 @@ const TextDiffTool: React.FC = () => {
                 backgroundContent.style.transform = `translate(-${scrollLeft}px, -${scrollTop}px)`;
             }
 
-            // 同步左侧的垂直滚动
+            // 同步左侧的垂直和横向滚动
             if (leftEditorRef.current && leftBackgroundRef.current && leftLineNumberRef.current) {
                 leftEditorRef.current.scrollTop = scrollTop;
+                leftEditorRef.current.scrollLeft = scrollLeft;
 
                 const leftLineNumberContent = leftLineNumberRef.current.firstChild as HTMLElement;
                 if (leftLineNumberContent) {
@@ -140,8 +141,7 @@ const TextDiffTool: React.FC = () => {
 
                 const leftBackgroundContent = leftBackgroundRef.current.firstChild as HTMLElement;
                 if (leftBackgroundContent) {
-                    const leftScrollLeft = leftEditorRef.current.scrollLeft;
-                    leftBackgroundContent.style.transform = `translate(-${leftScrollLeft}px, -${scrollTop}px)`;
+                    leftBackgroundContent.style.transform = `translate(-${scrollLeft}px, -${scrollTop}px)`;
                 }
             }
         }
@@ -298,8 +298,8 @@ const TextDiffTool: React.FC = () => {
     }, [diffResult]);
 
     return (
-        <div className="flex w-full flex-col items-center px-4 py-10 sm:px-6 lg:px-8 overflow-hidden">
-            <div className="flex w-full max-w-7xl flex-col items-center gap-2 text-center mb-6">
+        <div className="flex w-full h-full flex-col items-center overflow-hidden" style={{ maxHeight: 'calc(100vh - 200px)' }}>
+            <div className="flex w-full max-w-7xl flex-col items-center gap-2 text-center mb-6 flex-shrink-0">
                 <p className="text-3xl font-black leading-tight tracking-tighter text-gray-900 dark:text-white sm:text-4xl">文本差异对比</p>
                 <p className="text-base font-normal text-gray-500 dark:text-gray-400">对比两段文本的差异，支持直接编辑、上传文件或 Word 文档。</p>
             </div>
@@ -315,7 +315,7 @@ const TextDiffTool: React.FC = () => {
             )}
 
             {/* 差异统计 - 始终显示 */}
-            <div className="w-full max-w-7xl mb-4">
+            <div className="w-full max-w-7xl mb-4 flex-shrink-0">
                 <div className="rounded-lg border border-gray-200 dark:border-gray-700/50 bg-white dark:bg-gray-800/20 shadow-sm p-3">
                     <div className="flex items-center gap-6 text-sm flex-wrap">
                         <div className="flex items-center gap-2">
@@ -343,8 +343,8 @@ const TextDiffTool: React.FC = () => {
             </div>
 
             {/* 内联差异编辑器 - VS Code 风格 */}
-            <div className="w-full max-w-7xl">
-                <div className="rounded-xl border border-gray-200 dark:border-gray-700/50 bg-white dark:bg-gray-800/20 shadow-sm overflow-hidden">
+            <div className="w-full max-w-7xl flex-1 flex flex-col min-h-0">
+                <div className="rounded-xl border border-gray-200 dark:border-gray-700/50 bg-white dark:bg-gray-800/20 shadow-sm overflow-hidden flex-1 flex flex-col">
                     {/* 工具栏 */}
                     <div className="grid grid-cols-2 bg-gray-50 dark:bg-gray-800/50 border-b border-gray-200 dark:border-gray-700/50">
                         {/* 左侧工具栏 */}
@@ -424,9 +424,9 @@ const TextDiffTool: React.FC = () => {
                     />
 
                     {/* 编辑器主体 - 带差异高亮 */}
-                    <div className="grid grid-cols-2">
+                    <div className="grid grid-cols-2 flex-1 min-h-0">
                         {/* 左侧编辑器 */}
-                        <div className="border-r border-gray-200 dark:border-gray-700/50 relative overflow-hidden flex" style={{ height: '600px' }}>
+                        <div className="border-r border-gray-200 dark:border-gray-700/50 relative overflow-hidden flex h-full">
                             {/* 行号层 - 固定在左侧 */}
                             <div
                                 ref={leftLineNumberRef}
@@ -492,7 +492,7 @@ const TextDiffTool: React.FC = () => {
                         </div>
 
                         {/* 右侧编辑器 */}
-                        <div className="relative overflow-hidden flex" style={{ height: '600px' }}>
+                        <div className="relative overflow-hidden flex h-full">
                             {/* 行号层 - 固定在左侧 */}
                             <div
                                 ref={rightLineNumberRef}
