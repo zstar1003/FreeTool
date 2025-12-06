@@ -22,6 +22,8 @@ const TextDiffTool: React.FC = () => {
     const rightEditorRef = useRef<HTMLTextAreaElement>(null);
     const leftBackgroundRef = useRef<HTMLDivElement>(null);
     const rightBackgroundRef = useRef<HTMLDivElement>(null);
+    const leftLineNumberRef = useRef<HTMLDivElement>(null);
+    const rightLineNumberRef = useRef<HTMLDivElement>(null);
 
     // 计算文本差异
     const calculateDiff = useCallback((text1: string, text2: string): DiffLine[] => {
@@ -77,12 +79,70 @@ const TextDiffTool: React.FC = () => {
         setDiffResult(diff);
     }, [leftText, rightText, calculateDiff]);
 
-    // 同步滚动
+    // 同步滚动（只同步垂直滚动，横向滚动各自独立）
     const handleScroll = useCallback((side: 'left' | 'right') => {
-        if (side === 'left' && leftEditorRef.current && leftBackgroundRef.current) {
-            leftBackgroundRef.current.scrollTop = leftEditorRef.current.scrollTop;
-        } else if (side === 'right' && rightEditorRef.current && rightBackgroundRef.current) {
-            rightBackgroundRef.current.scrollTop = rightEditorRef.current.scrollTop;
+        if (side === 'left' && leftEditorRef.current && leftBackgroundRef.current && leftLineNumberRef.current) {
+            const scrollTop = leftEditorRef.current.scrollTop;
+            const scrollLeft = leftEditorRef.current.scrollLeft;
+
+            // 行号层通过 transform 移动
+            const lineNumberContent = leftLineNumberRef.current.firstChild as HTMLElement;
+            if (lineNumberContent) {
+                lineNumberContent.style.transform = `translateY(-${scrollTop}px)`;
+            }
+
+            // 背景层通过 transform 移动
+            const backgroundContent = leftBackgroundRef.current.firstChild as HTMLElement;
+            if (backgroundContent) {
+                backgroundContent.style.transform = `translate(-${scrollLeft}px, -${scrollTop}px)`;
+            }
+
+            // 同步右侧的垂直滚动
+            if (rightEditorRef.current && rightBackgroundRef.current && rightLineNumberRef.current) {
+                rightEditorRef.current.scrollTop = scrollTop;
+
+                const rightLineNumberContent = rightLineNumberRef.current.firstChild as HTMLElement;
+                if (rightLineNumberContent) {
+                    rightLineNumberContent.style.transform = `translateY(-${scrollTop}px)`;
+                }
+
+                const rightBackgroundContent = rightBackgroundRef.current.firstChild as HTMLElement;
+                if (rightBackgroundContent) {
+                    const rightScrollLeft = rightEditorRef.current.scrollLeft;
+                    rightBackgroundContent.style.transform = `translate(-${rightScrollLeft}px, -${scrollTop}px)`;
+                }
+            }
+        } else if (side === 'right' && rightEditorRef.current && rightBackgroundRef.current && rightLineNumberRef.current) {
+            const scrollTop = rightEditorRef.current.scrollTop;
+            const scrollLeft = rightEditorRef.current.scrollLeft;
+
+            // 行号层通过 transform 移动
+            const lineNumberContent = rightLineNumberRef.current.firstChild as HTMLElement;
+            if (lineNumberContent) {
+                lineNumberContent.style.transform = `translateY(-${scrollTop}px)`;
+            }
+
+            // 背景层通过 transform 移动
+            const backgroundContent = rightBackgroundRef.current.firstChild as HTMLElement;
+            if (backgroundContent) {
+                backgroundContent.style.transform = `translate(-${scrollLeft}px, -${scrollTop}px)`;
+            }
+
+            // 同步左侧的垂直滚动
+            if (leftEditorRef.current && leftBackgroundRef.current && leftLineNumberRef.current) {
+                leftEditorRef.current.scrollTop = scrollTop;
+
+                const leftLineNumberContent = leftLineNumberRef.current.firstChild as HTMLElement;
+                if (leftLineNumberContent) {
+                    leftLineNumberContent.style.transform = `translateY(-${scrollTop}px)`;
+                }
+
+                const leftBackgroundContent = leftBackgroundRef.current.firstChild as HTMLElement;
+                if (leftBackgroundContent) {
+                    const leftScrollLeft = leftEditorRef.current.scrollLeft;
+                    leftBackgroundContent.style.transform = `translate(-${leftScrollLeft}px, -${scrollTop}px)`;
+                }
+            }
         }
     }, []);
 
@@ -122,7 +182,40 @@ const TextDiffTool: React.FC = () => {
         });
     }, [leftText, rightText]);
 
-    // 根据实际文本行生成行号和背景
+    // 根据实际文本行生成行号
+    const generateLineNumbers = useCallback((side: 'left' | 'right', text: string) => {
+        const lines = text.split('\n');
+        const lineCount = Math.max(lines.length, 1);
+
+        return Array.from({ length: lineCount }, (_, index) => {
+            const lineNumber = index + 1;
+
+            return (
+                <div
+                    key={index}
+                    style={{
+                        height: '24px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'flex-end',
+                        paddingRight: '8px'
+                    }}
+                >
+                    <span
+                        className="text-gray-400 dark:text-gray-600 select-none font-mono"
+                        style={{
+                            fontSize: '15px',
+                            lineHeight: '24px'
+                        }}
+                    >
+                        {lineNumber}
+                    </span>
+                </div>
+            );
+        });
+    }, []);
+
+    // 根据实际文本行生成背景
     const generateLineBackgrounds = useCallback((side: 'left' | 'right', text: string) => {
         const lines = text.split('\n');
         const lineCount = Math.max(lines.length, 1);
@@ -158,25 +251,12 @@ const TextDiffTool: React.FC = () => {
             return (
                 <div
                     key={index}
-                    className={`flex ${bgColor}`}
+                    className={bgColor}
                     style={{
                         height: '24px',
-                        paddingLeft: '0px',
-                        paddingRight: '16px',
+                        minWidth: '100%'
                     }}
-                >
-                    <span
-                        className="text-gray-400 dark:text-gray-600 select-none text-right flex-shrink-0 font-mono"
-                        style={{
-                            fontSize: '15px',
-                            lineHeight: '24px',
-                            width: '32px',
-                            marginRight: '8px'
-                        }}
-                    >
-                        {lineNumber}
-                    </span>
-                </div>
+                />
             );
         });
     }, [diffResult]);
@@ -319,77 +399,135 @@ const TextDiffTool: React.FC = () => {
                     {/* 编辑器主体 - 带差异高亮 */}
                     <div className="grid grid-cols-2">
                         {/* 左侧编辑器 */}
-                        <div className="border-r border-gray-200 dark:border-gray-700/50 relative overflow-hidden">
-                            {/* 背景层 - 显示行号和差异高亮 */}
+                        <div className="border-r border-gray-200 dark:border-gray-700/50 relative overflow-hidden flex" style={{ height: '600px' }}>
+                            {/* 行号层 - 固定在左侧 */}
                             <div
-                                ref={leftBackgroundRef}
-                                className="absolute inset-0 pointer-events-none overflow-auto scrollbar-hide"
+                                ref={leftLineNumberRef}
+                                className="flex-shrink-0 overflow-hidden bg-gray-50 dark:bg-gray-800/30"
                                 style={{
-                                    scrollBehavior: 'auto',
-                                    paddingTop: '4px',
-                                    paddingBottom: '4px'
+                                    width: '44px',
+                                    overflowY: 'hidden',
+                                    scrollBehavior: 'auto'
                                 }}
                             >
-                                {generateLineBackgrounds('left', leftText)}
-                            </div>
-                            {/* 编辑层 */}
-                            <textarea
-                                ref={leftEditorRef}
-                                value={leftText}
-                                onChange={(e) => setLeftText(e.target.value)}
-                                onScroll={() => handleScroll('left')}
-                                className="w-full h-full resize-none bg-transparent text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary/20 placeholder:text-gray-400 dark:placeholder:text-gray-500 font-mono min-h-[500px] relative z-10"
-                                style={{
-                                    paddingLeft: '44px',
-                                    paddingRight: '16px',
+                                <div style={{
                                     paddingTop: '4px',
-                                    paddingBottom: '4px',
-                                    fontSize: '15px',
-                                    lineHeight: '24px',
-                                    border: 'none',
-                                    margin: '0',
-                                    boxSizing: 'border-box'
-                                }}
-                                placeholder="在此粘贴或输入原始文本..."
-                                spellCheck={false}
-                            />
+                                    paddingBottom: '4px'
+                                }}>
+                                    {generateLineNumbers('left', leftText)}
+                                </div>
+                            </div>
+
+                            {/* 编辑区容器 */}
+                            <div className="flex-1 relative overflow-hidden">
+                                {/* 背景层 - 显示差异高亮 */}
+                                <div
+                                    ref={leftBackgroundRef}
+                                    className="absolute inset-0 pointer-events-none overflow-hidden scrollbar-hide"
+                                    style={{
+                                        scrollBehavior: 'auto'
+                                    }}
+                                >
+                                    <div style={{
+                                        paddingTop: '4px',
+                                        paddingBottom: '4px'
+                                    }}>
+                                        {generateLineBackgrounds('left', leftText)}
+                                    </div>
+                                </div>
+                                {/* 编辑层 */}
+                                <textarea
+                                    ref={leftEditorRef}
+                                    value={leftText}
+                                    onChange={(e) => setLeftText(e.target.value)}
+                                    onScroll={() => handleScroll('left')}
+                                    className="w-full h-full resize-none bg-transparent text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary/20 placeholder:text-gray-400 dark:placeholder:text-gray-500 font-mono relative z-10"
+                                    style={{
+                                        paddingLeft: '8px',
+                                        paddingRight: '16px',
+                                        paddingTop: '4px',
+                                        paddingBottom: '4px',
+                                        fontSize: '15px',
+                                        lineHeight: '24px',
+                                        border: 'none',
+                                        margin: '0',
+                                        boxSizing: 'border-box',
+                                        whiteSpace: 'pre',
+                                        overflowX: 'auto',
+                                        overflowY: 'auto',
+                                        wordWrap: 'normal'
+                                    }}
+                                    placeholder="在此粘贴或输入原始文本..."
+                                    spellCheck={false}
+                                    wrap="off"
+                                />
+                            </div>
                         </div>
 
                         {/* 右侧编辑器 */}
-                        <div className="relative overflow-hidden">
-                            {/* 背景层 - 显示行号和差异高亮 */}
+                        <div className="relative overflow-hidden flex" style={{ height: '600px' }}>
+                            {/* 行号层 - 固定在左侧 */}
                             <div
-                                ref={rightBackgroundRef}
-                                className="absolute inset-0 pointer-events-none overflow-auto scrollbar-hide"
+                                ref={rightLineNumberRef}
+                                className="flex-shrink-0 overflow-hidden bg-gray-50 dark:bg-gray-800/30"
                                 style={{
-                                    scrollBehavior: 'auto',
-                                    paddingTop: '4px',
-                                    paddingBottom: '4px'
+                                    width: '44px',
+                                    overflowY: 'hidden',
+                                    scrollBehavior: 'auto'
                                 }}
                             >
-                                {generateLineBackgrounds('right', rightText)}
-                            </div>
-                            {/* 编辑层 */}
-                            <textarea
-                                ref={rightEditorRef}
-                                value={rightText}
-                                onChange={(e) => setRightText(e.target.value)}
-                                onScroll={() => handleScroll('right')}
-                                className="w-full h-full resize-none bg-transparent text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary/20 placeholder:text-gray-400 dark:placeholder:text-gray-500 font-mono min-h-[500px] relative z-10"
-                                style={{
-                                    paddingLeft: '44px',
-                                    paddingRight: '16px',
+                                <div style={{
                                     paddingTop: '4px',
-                                    paddingBottom: '4px',
-                                    fontSize: '14px',
-                                    lineHeight: '24px',
-                                    border: 'none',
-                                    margin: '0',
-                                    boxSizing: 'border-box'
-                                }}
-                                placeholder="在此粘贴或输入对比文本..."
-                                spellCheck={false}
-                            />
+                                    paddingBottom: '4px'
+                                }}>
+                                    {generateLineNumbers('right', rightText)}
+                                </div>
+                            </div>
+
+                            {/* 编辑区容器 */}
+                            <div className="flex-1 relative overflow-hidden">
+                                {/* 背景层 - 显示差异高亮 */}
+                                <div
+                                    ref={rightBackgroundRef}
+                                    className="absolute inset-0 pointer-events-none overflow-hidden scrollbar-hide"
+                                    style={{
+                                        scrollBehavior: 'auto'
+                                    }}
+                                >
+                                    <div style={{
+                                        paddingTop: '4px',
+                                        paddingBottom: '4px'
+                                    }}>
+                                        {generateLineBackgrounds('right', rightText)}
+                                    </div>
+                                </div>
+                                {/* 编辑层 */}
+                                <textarea
+                                    ref={rightEditorRef}
+                                    value={rightText}
+                                    onChange={(e) => setRightText(e.target.value)}
+                                    onScroll={() => handleScroll('right')}
+                                    className="w-full h-full resize-none bg-transparent text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary/20 placeholder:text-gray-400 dark:placeholder:text-gray-500 font-mono relative z-10"
+                                    style={{
+                                        paddingLeft: '8px',
+                                        paddingRight: '16px',
+                                        paddingTop: '4px',
+                                        paddingBottom: '4px',
+                                        fontSize: '15px',
+                                        lineHeight: '24px',
+                                        border: 'none',
+                                        margin: '0',
+                                        boxSizing: 'border-box',
+                                        whiteSpace: 'pre',
+                                        overflowX: 'auto',
+                                        overflowY: 'auto',
+                                        wordWrap: 'normal'
+                                    }}
+                                    placeholder="在此粘贴或输入对比文本..."
+                                    spellCheck={false}
+                                    wrap="off"
+                                />
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -401,6 +539,16 @@ const TextDiffTool: React.FC = () => {
                     display: none;
                 }
                 .scrollbar-hide {
+                    -ms-overflow-style: none;
+                    scrollbar-width: none;
+                }
+                /* 隐藏行号层的滚动条 */
+                .bg-gray-50.dark\\:bg-gray-800\\/30::-webkit-scrollbar,
+                .dark .bg-gray-50.dark\\:bg-gray-800\\/30::-webkit-scrollbar {
+                    display: none;
+                }
+                .bg-gray-50.dark\\:bg-gray-800\\/30,
+                .dark .bg-gray-50.dark\\:bg-gray-800\\/30 {
                     -ms-overflow-style: none;
                     scrollbar-width: none;
                 }
