@@ -376,278 +376,295 @@ const PhotoCollageTool: React.FC = () => {
                 </p>
             </div>
 
-            <div className="w-full max-w-7xl flex flex-col gap-6">
-                {/* 控制面板 */}
-                <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-800/20 shadow-sm p-6">
-                    <div className="flex flex-col gap-6">
-                        {/* 上传图片 */}
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
-                                上传图片 ({images.length} 张)
-                            </label>
-                            <div className="flex gap-3">
-                                <input
-                                    ref={fileInputRef}
-                                    type="file"
-                                    accept="image/*"
-                                    multiple
-                                    onChange={handleFileSelect}
-                                    className="flex-1 text-sm text-gray-600 dark:text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-gray-900 hover:file:opacity-90"
-                                />
+            <div className="w-full max-w-7xl">
+                {/* 主要内容区域 - 左右布局 */}
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    {/* 左侧 - 预览区域 */}
+                    <div className="lg:col-span-2 flex flex-col gap-6">
+                        {/* 上传区域 */}
+                        <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-800/20 shadow-sm p-6">
+                            <div className="flex flex-col gap-4">
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
+                                        上传图片 ({images.length} 张)
+                                    </label>
+                                    <div className="flex gap-3">
+                                        <input
+                                            ref={fileInputRef}
+                                            type="file"
+                                            accept="image/*"
+                                            multiple
+                                            onChange={handleFileSelect}
+                                            className="flex-1 text-sm text-gray-600 dark:text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-gray-900 hover:file:opacity-90"
+                                        />
+                                        {images.length > 0 && (
+                                            <button
+                                                onClick={clearAllImages}
+                                                className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700"
+                                            >
+                                                清除全部
+                                            </button>
+                                        )}
+                                    </div>
+                                </div>
+
+                                {/* 图片缩略图列表 - 更小尺寸 */}
                                 {images.length > 0 && (
-                                    <button
-                                        onClick={clearAllImages}
-                                        className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700"
-                                    >
-                                        清除全部
-                                    </button>
+                                    <div className="grid grid-cols-6 sm:grid-cols-8 md:grid-cols-10 gap-2">
+                                        {images.map((img, index) => (
+                                            <div key={index} className="relative group">
+                                                <img
+                                                    src={img.url}
+                                                    alt={`图片 ${index + 1}`}
+                                                    className="w-full aspect-square object-cover rounded border border-gray-200 dark:border-gray-700"
+                                                />
+                                                <button
+                                                    onClick={() => removeImage(index)}
+                                                    className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity text-xs"
+                                                >
+                                                    ×
+                                                </button>
+                                                <div className="absolute bottom-0.5 left-0.5 bg-black/60 text-white text-xs px-1 py-0.5 rounded text-[10px]">
+                                                    {index + 1}
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
                                 )}
                             </div>
                         </div>
 
-                        {/* 图片预览列表 */}
-                        {images.length > 0 && (
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
-                                    已上传的图片
-                                </label>
-                                <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-3">
-                                    {images.map((img, index) => (
-                                        <div key={index} className="relative group">
-                                            <img
-                                                src={img.url}
-                                                alt={`上传图片 ${index + 1}`}
-                                                className="w-full aspect-square object-cover rounded-lg border border-gray-200 dark:border-gray-700"
-                                            />
-                                            <button
-                                                onClick={() => removeImage(index)}
-                                                className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
-                                            >
-                                                <span className="material-symbols-outlined text-sm">close</span>
-                                            </button>
-                                            <div className="absolute bottom-1 left-1 bg-black/60 text-white text-xs px-1.5 py-0.5 rounded">
-                                                {index + 1}
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-                        )}
-
-                        {/* 布局方向切换（仅在2-3张图片时显示） */}
-                        {images.length >= 2 && images.length <= 3 && (
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
-                                    布局方向
-                                </label>
-                                <div className="flex gap-3">
+                        {/* 预览区域 */}
+                        {previewUrl ? (
+                            <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-800/20 shadow-sm p-6">
+                                <div className="flex items-center justify-between mb-4">
+                                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                                        拼接预览
+                                    </h3>
                                     <button
-                                        onClick={() => setLayoutDirection('vertical')}
-                                        className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-lg border-2 transition-all ${
-                                            layoutDirection === 'vertical'
-                                                ? 'border-primary bg-primary/5 text-primary'
-                                                : 'border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600'
-                                        }`}
+                                        onClick={handleDownload}
+                                        className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg font-medium hover:opacity-90 transition-opacity"
                                     >
-                                        <span className="material-symbols-outlined">view_column</span>
-                                        <span className="font-medium">左右排列</span>
-                                    </button>
-                                    <button
-                                        onClick={() => setLayoutDirection('horizontal')}
-                                        className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-lg border-2 transition-all ${
-                                            layoutDirection === 'horizontal'
-                                                ? 'border-primary bg-primary/5 text-primary'
-                                                : 'border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600'
-                                        }`}
-                                    >
-                                        <span className="material-symbols-outlined">view_agenda</span>
-                                        <span className="font-medium">上下排列</span>
+                                        <span className="material-symbols-outlined text-xl">download</span>
+                                        下载拼接图
                                     </button>
                                 </div>
-                            </div>
-                        )}
-
-                        {/* 图片适配模式 */}
-                        {images.length > 0 && (
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
-                                    图片适配方式
-                                </label>
-                                <div className="grid grid-cols-3 gap-3">
-                                    <button
-                                        onClick={() => setFitMode('cover')}
-                                        className={`flex flex-col items-center gap-2 px-4 py-3 rounded-lg border-2 transition-all ${
-                                            fitMode === 'cover'
-                                                ? 'border-primary bg-primary/5 text-primary'
-                                                : 'border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600'
-                                        }`}
-                                    >
-                                        <span className="material-symbols-outlined text-2xl">crop_free</span>
-                                        <div className="text-center">
-                                            <div className="font-medium text-sm">填充</div>
-                                            <div className="text-xs opacity-70 mt-0.5">裁剪图片填满</div>
-                                        </div>
-                                    </button>
-                                    <button
-                                        onClick={() => setFitMode('contain')}
-                                        className={`flex flex-col items-center gap-2 px-4 py-3 rounded-lg border-2 transition-all ${
-                                            fitMode === 'contain'
-                                                ? 'border-primary bg-primary/5 text-primary'
-                                                : 'border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600'
-                                        }`}
-                                    >
-                                        <span className="material-symbols-outlined text-2xl">fit_screen</span>
-                                        <div className="text-center">
-                                            <div className="font-medium text-sm">适应</div>
-                                            <div className="text-xs opacity-70 mt-0.5">完整显示</div>
-                                        </div>
-                                    </button>
-                                    <button
-                                        onClick={() => setFitMode('fill')}
-                                        className={`flex flex-col items-center gap-2 px-4 py-3 rounded-lg border-2 transition-all ${
-                                            fitMode === 'fill'
-                                                ? 'border-primary bg-primary/5 text-primary'
-                                                : 'border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600'
-                                        }`}
-                                    >
-                                        <span className="material-symbols-outlined text-2xl">open_in_full</span>
-                                        <div className="text-center">
-                                            <div className="font-medium text-sm">拉伸</div>
-                                            <div className="text-xs opacity-70 mt-0.5">可能变形</div>
-                                        </div>
-                                    </button>
+                                <div className="flex justify-center">
+                                    <img
+                                        src={previewUrl}
+                                        alt="拼接预览"
+                                        className="max-w-full rounded-lg shadow-lg border border-gray-200 dark:border-gray-700"
+                                        style={{ maxHeight: '600px' }}
+                                    />
                                 </div>
                             </div>
+                        ) : (
+                            images.length === 0 && (
+                                <div className="rounded-xl border border-dashed border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/30 p-12 text-center">
+                                    <span className="material-symbols-outlined text-6xl text-gray-400 dark:text-gray-500 mb-4 block">
+                                        collections
+                                    </span>
+                                    <p className="text-gray-500 dark:text-gray-400">
+                                        请上传图片开始制作拼接图
+                                    </p>
+                                </div>
+                            )
                         )}
+                    </div>
 
+                    {/* 右侧 - 控制面板 */}
+                    <div className="flex flex-col gap-4">
                         {/* 当前模板信息 */}
                         {currentTemplate && (
-                            <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
-                                <div className="flex items-center gap-2 text-blue-700 dark:text-blue-300">
-                                    <span className="material-symbols-outlined">info</span>
-                                    <span className="text-sm font-medium">
-                                        当前模板：{currentTemplate.name} ({currentTemplate.slots} 张图片) | 画布尺寸：{canvasWidth} x {canvasHeight}
-                                    </span>
+                            <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
+                                <div className="flex flex-col gap-1 text-blue-700 dark:text-blue-300">
+                                    <div className="flex items-center gap-2">
+                                        <span className="material-symbols-outlined text-lg">info</span>
+                                        <span className="text-xs font-medium">当前配置</span>
+                                    </div>
+                                    <div className="text-xs ml-6">
+                                        {currentTemplate.name} ({currentTemplate.slots}张)
+                                    </div>
+                                    <div className="text-xs ml-6">
+                                        {canvasWidth} x {canvasHeight}px
+                                    </div>
                                 </div>
                             </div>
                         )}
 
-                        {/* 画布宽高比选择 */}
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
-                                画布比例 (Aspect Ratio)
+                        {/* 画布比例 */}
+                        <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-800/20 shadow-sm p-4">
+                            <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
+                                画布比例
                             </label>
-                            <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+                            <div className="grid grid-cols-1 gap-2">
                                 {ASPECT_RATIOS.map(ratio => (
                                     <button
                                         key={ratio.id}
                                         onClick={() => setAspectRatio(ratio)}
-                                        className={`flex flex-col items-center gap-2 px-4 py-3 rounded-lg border-2 transition-all ${
+                                        className={`flex items-center justify-between px-3 py-2 rounded-lg border-2 transition-all ${
                                             aspectRatio.id === ratio.id
                                                 ? 'border-primary bg-primary/5 text-primary'
                                                 : 'border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600'
                                         }`}
                                     >
-                                        <div className="font-medium text-sm">{ratio.name}</div>
-                                        <div className="text-xs opacity-70">
+                                        <span className="font-medium text-sm">{ratio.name}</span>
+                                        <span className="text-xs opacity-70">
                                             {ratio.id === 'square' && '1:1'}
                                             {ratio.id === 'portrait' && '3:4'}
                                             {ratio.id === 'post' && '4:3'}
                                             {ratio.id === 'story' && '9:16'}
                                             {ratio.id === 'wide' && '16:9'}
-                                        </div>
+                                        </span>
                                     </button>
                                 ))}
                             </div>
                         </div>
 
-                        {/* 设置选项 */}
-                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                    基准尺寸
+                        {/* 布局方向 */}
+                        {images.length >= 2 && images.length <= 3 && (
+                            <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-800/20 shadow-sm p-4">
+                                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
+                                    布局方向
                                 </label>
-                                <select
-                                    value={canvasBaseSize}
-                                    onChange={(e) => setCanvasBaseSize(Number(e.target.value))}
-                                    className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
-                                >
-                                    <option value={800}>800px</option>
-                                    <option value={1200}>1200px</option>
-                                    <option value={1600}>1600px</option>
-                                    <option value={2000}>2000px</option>
-                                </select>
+                                <div className="grid grid-cols-1 gap-2">
+                                    <button
+                                        onClick={() => setLayoutDirection('vertical')}
+                                        className={`flex items-center justify-between px-3 py-2 rounded-lg border-2 transition-all ${
+                                            layoutDirection === 'vertical'
+                                                ? 'border-primary bg-primary/5 text-primary'
+                                                : 'border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600'
+                                        }`}
+                                    >
+                                        <div className="flex items-center gap-2">
+                                            <span className="material-symbols-outlined text-lg">view_column</span>
+                                            <span className="font-medium text-sm">左右排列</span>
+                                        </div>
+                                    </button>
+                                    <button
+                                        onClick={() => setLayoutDirection('horizontal')}
+                                        className={`flex items-center justify-between px-3 py-2 rounded-lg border-2 transition-all ${
+                                            layoutDirection === 'horizontal'
+                                                ? 'border-primary bg-primary/5 text-primary'
+                                                : 'border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600'
+                                        }`}
+                                    >
+                                        <div className="flex items-center gap-2">
+                                            <span className="material-symbols-outlined text-lg">view_agenda</span>
+                                            <span className="font-medium text-sm">上下排列</span>
+                                        </div>
+                                    </button>
+                                </div>
                             </div>
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                    图片间距: {spacing}px
+                        )}
+
+                        {/* 图片适配方式 */}
+                        {images.length > 0 && (
+                            <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-800/20 shadow-sm p-4">
+                                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
+                                    图片适配
                                 </label>
-                                <input
-                                    type="range"
-                                    min="0"
-                                    max="50"
-                                    value={spacing}
-                                    onChange={(e) => setSpacing(Number(e.target.value))}
-                                    className="w-full"
-                                />
+                                <div className="grid grid-cols-1 gap-2">
+                                    <button
+                                        onClick={() => setFitMode('cover')}
+                                        className={`flex items-center justify-between px-3 py-2 rounded-lg border-2 transition-all ${
+                                            fitMode === 'cover'
+                                                ? 'border-primary bg-primary/5 text-primary'
+                                                : 'border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600'
+                                        }`}
+                                    >
+                                        <div className="flex items-center gap-2">
+                                            <span className="material-symbols-outlined text-lg">crop_free</span>
+                                            <span className="font-medium text-sm">填充</span>
+                                        </div>
+                                        <span className="text-xs opacity-70">裁剪填满</span>
+                                    </button>
+                                    <button
+                                        onClick={() => setFitMode('contain')}
+                                        className={`flex items-center justify-between px-3 py-2 rounded-lg border-2 transition-all ${
+                                            fitMode === 'contain'
+                                                ? 'border-primary bg-primary/5 text-primary'
+                                                : 'border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600'
+                                        }`}
+                                    >
+                                        <div className="flex items-center gap-2">
+                                            <span className="material-symbols-outlined text-lg">fit_screen</span>
+                                            <span className="font-medium text-sm">适应</span>
+                                        </div>
+                                        <span className="text-xs opacity-70">完整显示</span>
+                                    </button>
+                                    <button
+                                        onClick={() => setFitMode('fill')}
+                                        className={`flex items-center justify-between px-3 py-2 rounded-lg border-2 transition-all ${
+                                            fitMode === 'fill'
+                                                ? 'border-primary bg-primary/5 text-primary'
+                                                : 'border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600'
+                                        }`}
+                                    >
+                                        <div className="flex items-center gap-2">
+                                            <span className="material-symbols-outlined text-lg">open_in_full</span>
+                                            <span className="font-medium text-sm">拉伸</span>
+                                        </div>
+                                        <span className="text-xs opacity-70">可能变形</span>
+                                    </button>
+                                </div>
                             </div>
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                    背景颜色
-                                </label>
-                                <div className="flex items-center gap-2">
+                        )}
+
+                        {/* 其他设置 */}
+                        <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-800/20 shadow-sm p-4">
+                            <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
+                                其他设置
+                            </label>
+                            <div className="flex flex-col gap-4">
+                                <div>
+                                    <label className="block text-xs text-gray-600 dark:text-gray-400 mb-2">
+                                        基准尺寸
+                                    </label>
+                                    <select
+                                        value={canvasBaseSize}
+                                        onChange={(e) => setCanvasBaseSize(Number(e.target.value))}
+                                        className="w-full px-3 py-2 text-sm border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+                                    >
+                                        <option value={800}>800px</option>
+                                        <option value={1200}>1200px</option>
+                                        <option value={1600}>1600px</option>
+                                        <option value={2000}>2000px</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label className="block text-xs text-gray-600 dark:text-gray-400 mb-2">
+                                        图片间距: {spacing}px
+                                    </label>
                                     <input
-                                        type="color"
-                                        value={backgroundColor}
-                                        onChange={(e) => setBackgroundColor(e.target.value)}
-                                        className="h-10 w-20 rounded border border-gray-300 dark:border-gray-700 cursor-pointer"
+                                        type="range"
+                                        min="0"
+                                        max="50"
+                                        value={spacing}
+                                        onChange={(e) => setSpacing(Number(e.target.value))}
+                                        className="w-full"
                                     />
-                                    <span className="text-sm text-gray-600 dark:text-gray-400 font-mono">
-                                        {backgroundColor.toUpperCase()}
-                                    </span>
+                                </div>
+                                <div>
+                                    <label className="block text-xs text-gray-600 dark:text-gray-400 mb-2">
+                                        背景颜色
+                                    </label>
+                                    <div className="flex items-center gap-2">
+                                        <input
+                                            type="color"
+                                            value={backgroundColor}
+                                            onChange={(e) => setBackgroundColor(e.target.value)}
+                                            className="h-9 w-16 rounded border border-gray-300 dark:border-gray-700 cursor-pointer"
+                                        />
+                                        <span className="text-xs text-gray-600 dark:text-gray-400 font-mono">
+                                            {backgroundColor.toUpperCase()}
+                                        </span>
+                                    </div>
                                 </div>
                             </div>
                         </div>
                     </div>
                 </div>
-
-                {/* 预览和下载 */}
-                {previewUrl && (
-                    <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-800/20 shadow-sm p-6">
-                        <div className="flex items-center justify-between mb-4">
-                            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                                拼接预览
-                            </h3>
-                            <button
-                                onClick={handleDownload}
-                                className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg font-medium hover:opacity-90 transition-opacity"
-                            >
-                                <span className="material-symbols-outlined text-xl">download</span>
-                                下载拼接图
-                            </button>
-                        </div>
-                        <div className="flex justify-center">
-                            <img
-                                src={previewUrl}
-                                alt="拼接预览"
-                                className="max-w-full rounded-lg shadow-lg border border-gray-200 dark:border-gray-700"
-                                style={{ maxHeight: '600px' }}
-                            />
-                        </div>
-                    </div>
-                )}
-
-                {/* 提示信息 */}
-                {images.length === 0 && (
-                    <div className="rounded-xl border border-dashed border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/30 p-12 text-center">
-                        <span className="material-symbols-outlined text-6xl text-gray-400 dark:text-gray-500 mb-4 block">
-                            collections
-                        </span>
-                        <p className="text-gray-500 dark:text-gray-400">
-                            请上传图片开始制作拼接图
-                        </p>
-                    </div>
-                )}
 
                 {/* 隐藏的 canvas */}
                 <canvas ref={canvasRef} className="hidden" />
