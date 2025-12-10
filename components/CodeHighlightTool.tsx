@@ -257,7 +257,7 @@ const CodeHighlightTool: React.FC = () => {
                                 <button
                                     onClick={handleCopyAsHTML}
                                     disabled={!highlightedCode}
-                                    className="flex items-center gap-1.5 px-3 py-1.5 bg-primary/10 text-primary rounded-lg text-xs font-medium hover:bg-primary/20 disabled:opacity-50 disabled:cursor-not-allowed transition-colors whitespace-nowrap"
+                                    className="flex items-center gap-1.5 px-3 py-1.5 bg-primary/10 text-primary border border-primary/30 dark:border-primary/40 rounded-lg text-xs font-medium hover:bg-primary/20 disabled:opacity-50 disabled:cursor-not-allowed transition-colors whitespace-nowrap"
                                 >
                                     <span className="material-symbols-outlined text-base">description</span>
                                     <span>复制到Word</span>

@@ -263,7 +263,7 @@ const VideoAspectConverter: React.FC = () => {
                                     type="file"
                                     accept="video/*"
                                     onChange={handleFileSelect}
-                                    className="flex-1 text-sm text-gray-600 dark:text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-white hover:file:opacity-90"
+                                    className="flex-1 text-sm text-gray-600 dark:text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-gray-900 hover:file:opacity-90"
                                     style={{ '--file-bg': '#607AFB' } as React.CSSProperties}
                                 />
                                 {videoFile && (
