@@ -165,7 +165,7 @@ const App: React.FC = () => {
                         <picture>
                             <source srcSet={getAssetUrl('assets/logo.webp')} type="image/webp" />
                             <img
-                                src={getAssetUrl('logo.webp')}
+                                src={getAssetUrl('logo.png')}
                                 alt="FreeTool Logo"
                                 className="w-10 h-10 rounded-lg object-cover"
                                 loading="eager"
