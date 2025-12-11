@@ -1,0 +1,9 @@
+# Allow all crawlers
+User-agent: *
+Allow: /
+
+# Sitemap location
+Sitemap: https://xdxsb.top/FreeTool/sitemap.xml
+
+# Crawl delay (optional, in seconds)
+Crawl-delay: 1
