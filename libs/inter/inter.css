@@ -3,7 +3,9 @@
   font-style: normal;
   font-weight: 400;
   font-display: swap;
-  src: url(Inter-400.ttf) format('truetype');
+  src: url(Inter-400.woff2) format('woff2'),
+       url(Inter-400.ttf) format('truetype');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+0259, U+1E00-1EFF;
 }
 
 @font-face {
@@ -11,7 +13,9 @@
   font-style: normal;
   font-weight: 500;
   font-display: swap;
-  src: url(Inter-500.ttf) format('truetype');
+  src: url(Inter-500.woff2) format('woff2'),
+       url(Inter-500.ttf) format('truetype');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+0259, U+1E00-1EFF;
 }
 
 @font-face {
@@ -19,7 +23,9 @@
   font-style: normal;
   font-weight: 700;
   font-display: swap;
-  src: url(Inter-700.ttf) format('truetype');
+  src: url(Inter-700.woff2) format('woff2'),
+       url(Inter-700.ttf) format('truetype');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+0259, U+1E00-1EFF;
 }
 
 @font-face {
@@ -27,5 +33,7 @@
   font-style: normal;
   font-weight: 900;
   font-display: swap;
-  src: url(Inter-900.ttf) format('truetype');
+  src: url(Inter-900.woff2) format('woff2'),
+       url(Inter-900.ttf) format('truetype');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+0259, U+1E00-1EFF;
 }
