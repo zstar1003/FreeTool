@@ -14,7 +14,8 @@ type ToolType =
     | 'table-converter'
     | 'video-aspect-converter'
     | 'text-diff'
-    | 'pdf-to-ppt';
+    | 'pdf-to-ppt'
+    | 'prompt-generator';
 
 interface Tool {
     id: ToolType;
@@ -77,6 +78,11 @@ const TOOLS: Tool[] = [
         id: 'pdf-to-ppt',
         name: 'PDF',
         icon: 'slideshow',
+    },
+    {
+        id: 'prompt-generator',
+        name: '提示词',
+        icon: 'psychology',
     },
 ];
 
