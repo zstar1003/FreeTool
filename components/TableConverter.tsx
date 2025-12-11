@@ -21,20 +21,6 @@ function debounce<T extends (...args: any[]) => any>(fn: T, delay: number): (...
   };
 }
 
-const loadDataGridXLScript = () =>
-    new Promise<void>((resolve, reject) => {
-        if (window.DataGridXL) {
-            resolve();
-            return;
-        }
-        const script = document.createElement('script');
-        script.src = '/libs/datagridxl/datagridxl2.js';
-        script.async = true;
-        script.onload = () => resolve();
-        script.onerror = () => reject(new Error('load_failed'));
-        document.head.appendChild(script);
-    });
-
 type TableFormat = 'markdown' | 'latex' | 'word';
 
 const createEmptyTable = (rows: number, cols: number) =>
@@ -91,25 +77,6 @@ const TableConverter: React.FC = () => {
     useEffect(() => {
         let disposed = false;
 
-        const waitForDataGridXL = () =>
-            new Promise<void>((resolve, reject) => {
-                if (window.DataGridXL) {
-                    resolve();
-                    return;
-                }
-
-                const start = Date.now();
-                const interval = window.setInterval(() => {
-                    if (window.DataGridXL) {
-                        window.clearInterval(interval);
-                        resolve();
-                    } else if (Date.now() - start > 8000) {
-                        window.clearInterval(interval);
-                        reject(new Error('timeout'));
-                    }
-                }, 120);
-            });
-
         const mountGrid = async () => {
             if (!gridContainerRef.current) {
                 // 如果容器还没准备好，等待一下
@@ -131,8 +98,7 @@ const TableConverter: React.FC = () => {
             setGridStatus('loading');
 
             try {
-                await loadDataGridXLScript();
-                await waitForDataGridXL();
+                await loadDataGridXL();
             } catch {
                 if (!disposed) {
                     setGridStatus('error');

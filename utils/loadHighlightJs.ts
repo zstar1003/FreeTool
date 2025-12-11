@@ -12,20 +12,28 @@ export const loadHighlightJs = async (): Promise<void> => {
     return;
   }
 
-  // 等待 script 标签加载完成
-  return new Promise((resolve) => {
-    const checkInterval = setInterval(() => {
-      if (window.hljs) {
-        highlightJsLoaded = true;
-        clearInterval(checkInterval);
-        resolve();
-      }
-    }, 100);
+  // 动态加载 Highlight.js 脚本
+  return new Promise((resolve, reject) => {
+    const script = document.createElement('script');
+    script.src = './libs/highlight.js/highlight.min.js';
+    script.async = true;
 
-    // 超时处理（10秒）
-    setTimeout(() => {
-      clearInterval(checkInterval);
+    script.onload = () => {
+      highlightJsLoaded = true;
       resolve();
+    };
+
+    script.onerror = () => {
+      reject(new Error('Highlight.js 加载失败'));
+    };
+
+    document.head.appendChild(script);
+
+    // 超时处理
+    setTimeout(() => {
+      if (!highlightJsLoaded) {
+        reject(new Error('Highlight.js 加载超时'));
+      }
     }, 10000);
   });
 };
