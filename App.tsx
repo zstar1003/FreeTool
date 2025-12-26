@@ -6,6 +6,7 @@ const TranslateTool = lazy(() => import('./components/TranslateTool'));
 const ImageConverterTool = lazy(() => import('./components/ImageConverterTool'));
 const ImageEditorTool = lazy(() => import('./components/ImageEditorTool'));
 const ImageComparisonTool = lazy(() => import('./components/ImageComparisonTool'));
+const ImageRoundCornerTool = lazy(() => import('./components/ImageRoundCornerTool'));
 const PhotoCollageTool = lazy(() => import('./components/PhotoCollageTool'));
 const CodeHighlightTool = lazy(() => import('./components/CodeHighlightTool'));
 const TextFormatterTool = lazy(() => import('./components/TextFormatterTool'));
@@ -29,6 +30,7 @@ type ToolType =
     | 'image-converter'
     | 'image-editor'
     | 'image-comparison'
+    | 'image-round-corner'
     | 'photo-collage'
     | 'code-highlight'
     | 'text-formatter'
@@ -102,6 +104,12 @@ const TOOLS: Tool[] = [
         name: '多图自由拼接',
         icon: 'layers',
         component: ImageComparisonTool,
+    },
+    {
+        id: 'image-round-corner',
+        name: '图片圆角处理',
+        icon: 'rounded_corner',
+        component: ImageRoundCornerTool,
     },
     {
         id: 'photo-collage',

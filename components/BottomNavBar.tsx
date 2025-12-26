@@ -5,6 +5,7 @@ type ToolType =
     | 'image-converter'
     | 'image-editor'
     | 'image-comparison'
+    | 'image-round-corner'
     | 'photo-collage'
     | 'code-highlight'
     | 'text-formatter'
@@ -63,6 +64,11 @@ const TOOLS: Tool[] = [
         id: 'image-comparison',
         name: '拼接',
         icon: 'layers',
+    },
+    {
+        id: 'image-round-corner',
+        name: '圆角',
+        icon: 'rounded_corner',
     },
     {
         id: 'photo-collage',
