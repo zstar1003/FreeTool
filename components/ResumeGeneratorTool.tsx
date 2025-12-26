@@ -144,9 +144,9 @@ const ResumeGeneratorTool: React.FC = () => {
     const resumeRef = useRef<HTMLDivElement>(null);
 
     const fontSizeMap = {
-        small: { name: '20px', title: '11px', section: '12px', body: '10px' },
-        medium: { name: '24px', title: '12px', section: '13px', body: '11px' },
-        large: { name: '28px', title: '14px', section: '14px', body: '12px' },
+        small: { name: '18px', title: '10px', section: '10px', body: '9px', contact: '8px' },
+        medium: { name: '20px', title: '11px', section: '11px', body: '10px', contact: '9px' },
+        large: { name: '22px', title: '12px', section: '12px', body: '11px', contact: '10px' },
     };
 
     // 加载示例数据
@@ -296,7 +296,12 @@ const ResumeGeneratorTool: React.FC = () => {
             return;
         }
 
-        const fonts = fontSizeMap[fontSize];
+        // 导出时使用更大的字号
+        const exportFonts = {
+            small: { name: '24px', title: '12px', section: '13px', body: '11px', contact: '10px' },
+            medium: { name: '28px', title: '14px', section: '14px', body: '12px', contact: '11px' },
+            large: { name: '32px', title: '16px', section: '15px', body: '13px', contact: '12px' },
+        }[fontSize];
 
         printWindow.document.write(`
             <!DOCTYPE html>
@@ -314,48 +319,48 @@ const ResumeGeneratorTool: React.FC = () => {
                     .resume {
                         width: 210mm;
                         min-height: 297mm;
-                        padding: 12mm 16mm;
+                        padding: 15mm 20mm;
                         background: white;
                     }
-                    .header { text-align: center; margin-bottom: 16px; }
-                    .name { font-size: ${fonts.name}; font-weight: 700; color: #1a1a1a; margin-bottom: 4px; }
-                    .title { font-size: ${fonts.title}; color: #666; margin-bottom: 8px; }
-                    .contact { display: flex; flex-wrap: wrap; justify-content: center; gap: 12px; font-size: 10px; color: #555; }
+                    .header { text-align: center; margin-bottom: 20px; }
+                    .name { font-size: ${exportFonts.name}; font-weight: 700; color: #1a1a1a; margin-bottom: 4px; }
+                    .title { font-size: ${exportFonts.title}; color: #666; margin-bottom: 10px; }
+                    .contact { display: flex; flex-wrap: wrap; justify-content: center; gap: 14px; font-size: ${exportFonts.contact}; color: #555; }
                     .contact-item { display: flex; align-items: center; gap: 4px; }
-                    .summary { font-size: ${fonts.body}; color: #444; line-height: 1.6; text-align: justify; margin-top: 12px; }
-                    .section { margin-bottom: 14px; }
+                    .summary { font-size: ${exportFonts.body}; color: #444; line-height: 1.6; text-align: justify; margin-top: 14px; }
+                    .section { margin-bottom: 16px; }
                     .section-title {
-                        font-size: ${fonts.section};
+                        font-size: ${exportFonts.section};
                         font-weight: 700;
                         color: ${themeColor};
-                        border-bottom: 1.5px solid ${themeColor};
+                        border-bottom: 2px solid ${themeColor};
                         padding-bottom: 4px;
-                        margin-bottom: 10px;
+                        margin-bottom: 12px;
                         text-transform: uppercase;
                         letter-spacing: 1px;
                     }
-                    .item { margin-bottom: 12px; }
+                    .item { margin-bottom: 14px; }
                     .item-header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 2px; }
-                    .item-title { font-size: ${fonts.body}; font-weight: 600; color: #1a1a1a; }
-                    .item-subtitle { font-size: ${fonts.body}; color: #555; }
-                    .item-date { font-size: 10px; color: #888; }
-                    .item-meta { font-size: 10px; color: #666; margin-bottom: 4px; }
-                    .descriptions { padding-left: 16px; }
+                    .item-title { font-size: ${exportFonts.body}; font-weight: 600; color: #1a1a1a; }
+                    .item-subtitle { font-size: ${exportFonts.body}; color: #555; }
+                    .item-date { font-size: ${exportFonts.contact}; color: #888; }
+                    .item-meta { font-size: ${exportFonts.contact}; color: #666; margin-bottom: 4px; }
+                    .descriptions { padding-left: 18px; }
                     .desc-item {
-                        font-size: ${fonts.body};
+                        font-size: ${exportFonts.body};
                         color: #444;
                         line-height: 1.5;
-                        margin-bottom: 2px;
+                        margin-bottom: 3px;
                         position: relative;
                     }
                     .desc-item::before {
                         content: "•";
                         position: absolute;
-                        left: -12px;
+                        left: -14px;
                         color: #666;
                     }
-                    .skills-row { display: flex; margin-bottom: 6px; font-size: ${fonts.body}; }
-                    .skill-category { font-weight: 600; color: #1a1a1a; min-width: 80px; }
+                    .skills-row { display: flex; margin-bottom: 8px; font-size: ${exportFonts.body}; }
+                    .skill-category { font-weight: 600; color: #1a1a1a; min-width: 90px; }
                     .skill-items { color: #444; }
                 </style>
             </head>
@@ -640,29 +645,28 @@ const ResumeGeneratorTool: React.FC = () => {
                         <span className="text-sm font-medium text-gray-700 dark:text-gray-300">实时预览</span>
                         <span className="text-xs text-gray-500">A4</span>
                     </div>
-                    <div className="p-4 overflow-auto max-h-[800px] flex justify-center">
+                    <div className="p-4">
                         <div
                             ref={resumeRef}
-                            className="bg-white shadow-xl origin-top"
+                            className="bg-white shadow-xl mx-auto"
                             style={{
-                                width: '210mm',
-                                minHeight: '297mm',
-                                padding: '12mm 16mm',
-                                transform: 'scale(0.5)',
-                                transformOrigin: 'top center',
+                                aspectRatio: '210 / 297',
+                                width: '100%',
+                                maxWidth: '595px',
+                                padding: '32px 40px',
                             }}
                         >
                             {/* 头部 */}
-                            <div className="header" style={{ textAlign: 'center', marginBottom: '16px' }}>
-                                <div className="name" style={{ fontSize: fonts.name, fontWeight: 700, color: '#1a1a1a', marginBottom: '4px' }}>
+                            <div className="header" style={{ textAlign: 'center', marginBottom: '12px' }}>
+                                <div className="name" style={{ fontSize: fonts.name, fontWeight: 700, color: '#1a1a1a', marginBottom: '2px' }}>
                                     {resumeData.personal.name || '您的姓名'}
                                 </div>
                                 {resumeData.personal.title && (
-                                    <div style={{ fontSize: fonts.title, color: '#666', marginBottom: '8px' }}>
+                                    <div style={{ fontSize: fonts.title, color: '#666', marginBottom: '6px' }}>
                                         {resumeData.personal.title}
                                     </div>
                                 )}
-                                <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '12px', fontSize: '10px', color: '#555' }}>
+                                <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '10px', fontSize: fonts.contact, color: '#555' }}>
                                     {resumeData.personal.phone && (
                                         <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                                             <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M6.62 10.79c1.44 2.83 3.76 5.14 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z"/></svg>
@@ -689,7 +693,7 @@ const ResumeGeneratorTool: React.FC = () => {
                                     )}
                                 </div>
                                 {resumeData.personal.summary && (
-                                    <div style={{ fontSize: fonts.body, color: '#444', lineHeight: 1.6, textAlign: 'justify', marginTop: '12px' }}>
+                                    <div style={{ fontSize: fonts.body, color: '#444', lineHeight: 1.5, textAlign: 'justify', marginTop: '10px' }}>
                                         {resumeData.personal.summary}
                                     </div>
                                 )}
@@ -697,24 +701,24 @@ const ResumeGeneratorTool: React.FC = () => {
 
                             {/* 教育经历 */}
                             {resumeData.education.length > 0 && (
-                                <div className="section" style={{ marginBottom: '14px' }}>
-                                    <div style={{ fontSize: fonts.section, fontWeight: 700, color: themeColor, borderBottom: `1.5px solid ${themeColor}`, paddingBottom: '4px', marginBottom: '10px', textTransform: 'uppercase', letterSpacing: '1px' }}>
+                                <div className="section" style={{ marginBottom: '12px' }}>
+                                    <div style={{ fontSize: fonts.section, fontWeight: 700, color: themeColor, borderBottom: `1.5px solid ${themeColor}`, paddingBottom: '3px', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '1px' }}>
                                         教育经历
                                     </div>
                                     {resumeData.education.map((edu) => (
-                                        <div key={edu.id} style={{ marginBottom: '12px' }}>
-                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '2px' }}>
+                                        <div key={edu.id} style={{ marginBottom: '10px' }}>
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '1px' }}>
                                                 <span style={{ fontSize: fonts.body, fontWeight: 600, color: '#1a1a1a' }}>{edu.school}</span>
-                                                <span style={{ fontSize: '10px', color: '#888' }}>{edu.startDate} - {edu.endDate}</span>
+                                                <span style={{ fontSize: fonts.contact, color: '#888' }}>{edu.startDate} - {edu.endDate}</span>
                                             </div>
-                                            <div style={{ fontSize: '10px', color: '#666', marginBottom: '4px' }}>
+                                            <div style={{ fontSize: fonts.contact, color: '#666', marginBottom: '3px' }}>
                                                 {[edu.degree, edu.major, edu.gpa].filter(Boolean).join(' | ')}
                                             </div>
                                             {edu.descriptions.filter(d => d.trim()).length > 0 && (
-                                                <div style={{ paddingLeft: '16px' }}>
+                                                <div style={{ paddingLeft: '14px' }}>
                                                     {edu.descriptions.filter(d => d.trim()).map((desc, i) => (
-                                                        <div key={i} style={{ fontSize: fonts.body, color: '#444', lineHeight: 1.5, marginBottom: '2px', position: 'relative' }}>
-                                                            <span style={{ position: 'absolute', left: '-12px', color: '#666' }}>•</span>
+                                                        <div key={i} style={{ fontSize: fonts.body, color: '#444', lineHeight: 1.4, marginBottom: '1px', position: 'relative' }}>
+                                                            <span style={{ position: 'absolute', left: '-10px', color: '#666' }}>•</span>
                                                             {desc}
                                                         </div>
                                                     ))}
@@ -727,24 +731,24 @@ const ResumeGeneratorTool: React.FC = () => {
 
                             {/* 工作经验 */}
                             {resumeData.experience.length > 0 && (
-                                <div className="section" style={{ marginBottom: '14px' }}>
-                                    <div style={{ fontSize: fonts.section, fontWeight: 700, color: themeColor, borderBottom: `1.5px solid ${themeColor}`, paddingBottom: '4px', marginBottom: '10px', textTransform: 'uppercase', letterSpacing: '1px' }}>
+                                <div className="section" style={{ marginBottom: '12px' }}>
+                                    <div style={{ fontSize: fonts.section, fontWeight: 700, color: themeColor, borderBottom: `1.5px solid ${themeColor}`, paddingBottom: '3px', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '1px' }}>
                                         工作经验
                                     </div>
                                     {resumeData.experience.map((exp) => (
-                                        <div key={exp.id} style={{ marginBottom: '12px' }}>
-                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '2px' }}>
+                                        <div key={exp.id} style={{ marginBottom: '10px' }}>
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '1px' }}>
                                                 <span style={{ fontSize: fonts.body, fontWeight: 600, color: '#1a1a1a' }}>{exp.company}</span>
-                                                <span style={{ fontSize: '10px', color: '#888' }}>{exp.startDate} - {exp.endDate}</span>
+                                                <span style={{ fontSize: fonts.contact, color: '#888' }}>{exp.startDate} - {exp.endDate}</span>
                                             </div>
-                                            <div style={{ fontSize: '10px', color: '#666', marginBottom: '4px' }}>
+                                            <div style={{ fontSize: fonts.contact, color: '#666', marginBottom: '3px' }}>
                                                 {[exp.position, exp.location].filter(Boolean).join(' | ')}
                                             </div>
                                             {exp.descriptions.filter(d => d.trim()).length > 0 && (
-                                                <div style={{ paddingLeft: '16px' }}>
+                                                <div style={{ paddingLeft: '14px' }}>
                                                     {exp.descriptions.filter(d => d.trim()).map((desc, i) => (
-                                                        <div key={i} style={{ fontSize: fonts.body, color: '#444', lineHeight: 1.5, marginBottom: '2px', position: 'relative' }}>
-                                                            <span style={{ position: 'absolute', left: '-12px', color: '#666' }}>•</span>
+                                                        <div key={i} style={{ fontSize: fonts.body, color: '#444', lineHeight: 1.4, marginBottom: '1px', position: 'relative' }}>
+                                                            <span style={{ position: 'absolute', left: '-10px', color: '#666' }}>•</span>
                                                             {desc}
                                                         </div>
                                                     ))}
@@ -757,21 +761,21 @@ const ResumeGeneratorTool: React.FC = () => {
 
                             {/* 项目经历 */}
                             {resumeData.projects.length > 0 && (
-                                <div className="section" style={{ marginBottom: '14px' }}>
-                                    <div style={{ fontSize: fonts.section, fontWeight: 700, color: themeColor, borderBottom: `1.5px solid ${themeColor}`, paddingBottom: '4px', marginBottom: '10px', textTransform: 'uppercase', letterSpacing: '1px' }}>
+                                <div className="section" style={{ marginBottom: '12px' }}>
+                                    <div style={{ fontSize: fonts.section, fontWeight: 700, color: themeColor, borderBottom: `1.5px solid ${themeColor}`, paddingBottom: '3px', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '1px' }}>
                                         项目经历
                                     </div>
                                     {resumeData.projects.map((proj) => (
-                                        <div key={proj.id} style={{ marginBottom: '12px' }}>
-                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '2px' }}>
+                                        <div key={proj.id} style={{ marginBottom: '10px' }}>
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '1px' }}>
                                                 <span style={{ fontSize: fonts.body, fontWeight: 600, color: '#1a1a1a' }}>{proj.name}</span>
-                                                <span style={{ fontSize: '10px', color: '#888' }}>{proj.date}</span>
+                                                <span style={{ fontSize: fonts.contact, color: '#888' }}>{proj.date}</span>
                                             </div>
                                             {proj.descriptions.filter(d => d.trim()).length > 0 && (
-                                                <div style={{ paddingLeft: '16px' }}>
+                                                <div style={{ paddingLeft: '14px' }}>
                                                     {proj.descriptions.filter(d => d.trim()).map((desc, i) => (
-                                                        <div key={i} style={{ fontSize: fonts.body, color: '#444', lineHeight: 1.5, marginBottom: '2px', position: 'relative' }}>
-                                                            <span style={{ position: 'absolute', left: '-12px', color: '#666' }}>•</span>
+                                                        <div key={i} style={{ fontSize: fonts.body, color: '#444', lineHeight: 1.4, marginBottom: '1px', position: 'relative' }}>
+                                                            <span style={{ position: 'absolute', left: '-10px', color: '#666' }}>•</span>
                                                             {desc}
                                                         </div>
                                                     ))}
@@ -784,13 +788,13 @@ const ResumeGeneratorTool: React.FC = () => {
 
                             {/* 专业技能 */}
                             {resumeData.skills.length > 0 && (
-                                <div className="section" style={{ marginBottom: '14px' }}>
-                                    <div style={{ fontSize: fonts.section, fontWeight: 700, color: themeColor, borderBottom: `1.5px solid ${themeColor}`, paddingBottom: '4px', marginBottom: '10px', textTransform: 'uppercase', letterSpacing: '1px' }}>
+                                <div className="section" style={{ marginBottom: '12px' }}>
+                                    <div style={{ fontSize: fonts.section, fontWeight: 700, color: themeColor, borderBottom: `1.5px solid ${themeColor}`, paddingBottom: '3px', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '1px' }}>
                                         专业技能
                                     </div>
                                     {resumeData.skills.map((skill, idx) => (
-                                        <div key={idx} style={{ display: 'flex', marginBottom: '6px', fontSize: fonts.body }}>
-                                            <span style={{ fontWeight: 600, color: '#1a1a1a', minWidth: '80px' }}>{skill.category}：</span>
+                                        <div key={idx} style={{ display: 'flex', marginBottom: '4px', fontSize: fonts.body }}>
+                                            <span style={{ fontWeight: 600, color: '#1a1a1a', minWidth: '70px' }}>{skill.category}：</span>
                                             <span style={{ color: '#444' }}>{skill.items}</span>
                                         </div>
                                     ))}
