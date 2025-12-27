@@ -41,7 +41,6 @@ interface PersonalInfo {
     email: string;
     location: string;
     website: string;
-    summary: string;
 }
 
 interface Education {
@@ -90,7 +89,6 @@ const defaultResumeData: ResumeData = {
         email: '',
         location: '',
         website: '',
-        summary: '',
     },
     education: [],
     experience: [],
@@ -101,36 +99,45 @@ const defaultResumeData: ResumeData = {
 // 示例数据
 const sampleResumeData: ResumeData = {
     personal: {
-        name: '张三',
-        title: '高级前端工程师',
+        name: '我有一计',
+        title: 'AI全栈工程师',
         phone: '138-0000-0000',
-        email: 'zhangsan@email.com',
-        location: '北京市',
-        website: 'github.com/zhangsan',
-        summary: '5年前端开发经验，精通 React、Vue、TypeScript 等技术栈。具有丰富的大型项目开发经验，善于解决复杂的技术难题，注重代码质量和团队协作。',
+        email: 'zstar1003@163.com',
+        location: '西安市',
+        website: 'github.com/zstar1003',
     },
     education: [
         {
             id: '1',
-            school: '北京大学',
+            school: '西安电子科技大学',
             degree: '本科',
+            major: '人工智能',
+            gpa: '3.8/4.0',
+            startDate: '2019.09',
+            endDate: '2023.06',
+            descriptions: ['主修课程：数据结构、算法设计、操作系统、计算机网络', '获得一等奖学金、优秀毕业生称号'],
+        },
+            {
+            id: '2',
+            school: '西安电子科技大学',
+            degree: '硕士',
             major: '计算机科学与技术',
             gpa: '3.8/4.0',
-            startDate: '2015.09',
-            endDate: '2019.06',
-            descriptions: ['主修课程：数据结构、算法设计、操作系统、计算机网络', '获得国家奖学金、优秀毕业生称号'],
+            startDate: '2023.09',
+            endDate: '2026.06',
+            descriptions: ['主修课程：数据结构、算法设计、操作系统、计算机网络', '获得一等奖学金、优秀毕业生称号'],
         },
     ],
     experience: [
         {
             id: '1',
-            company: '字节跳动',
-            position: '高级前端工程师',
-            location: '北京',
+            company: '华为',
+            position: 'AI应用工程师',
+            location: '上海',
             startDate: '2021.06',
             endDate: '至今',
             descriptions: [
-                '负责抖音创作者平台的前端架构设计与开发，日活用户超过500万',
+                '负责华为云创作者平台的前端架构设计与开发，日活用户超过500万',
                 '主导前端性能优化项目，页面加载时间减少40%，首屏渲染时间缩短50%',
                 '搭建前端组件库和工程化体系，提升团队开发效率30%',
             ],
@@ -138,7 +145,7 @@ const sampleResumeData: ResumeData = {
         {
             id: '2',
             company: '阿里巴巴',
-            position: '前端工程师',
+            position: '算法工程师',
             location: '杭州',
             startDate: '2019.07',
             endDate: '2021.05',
@@ -151,12 +158,32 @@ const sampleResumeData: ResumeData = {
     projects: [
         {
             id: '1',
-            name: '开源组件库 StarUI',
-            date: '2023.01 - 至今',
+            name: '开源工具网站FreeTool',
+            date: '2025.11 - 至今',
             descriptions: [
-                '基于 React 18 和 TypeScript 构建的企业级 UI 组件库',
-                'GitHub Star 2000+，npm 周下载量 5000+',
+                '基于 React 18 和 TypeScript 构建的工具站',
+                'GitHub Star 100+',
                 '支持主题定制、国际化、无障碍访问等特性',
+            ],
+        },
+        {
+            id: '2',
+            name: '开源软件FreePDF',
+            date: '2025.9 - 至今',
+            descriptions: [
+                '基于 PDFMathTranslate 和 Python 构建的PDF双语文献阅读器',
+                'GitHub Star 300+',
+                '支持将各语言的PDF文献转成中文，并支持接入大模型基于文献内容进行问答',
+            ],
+        },
+        {       
+            id: '3',
+            name: '开源软件FreeTex',
+            date: '2025.9 - 至今',
+            descriptions: [
+                '基于 UniMERNet 和 Python 构建的公式智能识别软件',
+                'GitHub Star 500+',
+                '支持识别图像中的数学公式并将其转换为可编辑的Latex格式。',
             ],
         },
     ],
@@ -208,13 +235,6 @@ const createPdfStyles = (themeColor: string, fontSize: number) => StyleSheet.cre
         gap: 3,
         fontSize: fontSize - 1,
         color: '#555555',
-    },
-    summary: {
-        fontSize: fontSize - 1,
-        color: '#444444',
-        lineHeight: 1.5,
-        textAlign: 'justify',
-        marginTop: 8,
     },
     section: {
         marginBottom: 10,
@@ -356,7 +376,6 @@ const ResumePDFDocument: React.FC<ResumePDFProps> = ({ resumeData, themeColor, f
                             </View>
                         )}
                     </View>
-                    {personal.summary && <Text style={styles.summary}>{personal.summary}</Text>}
                 </View>
 
                 {/* 教育经历 */}
@@ -530,11 +549,6 @@ const ResumePreview: React.FC<ResumePreviewProps> = ({ resumeData, themeColor, f
                         </span>
                     )}
                 </div>
-                {personal.summary && (
-                    <div style={{ fontSize: `${fontSize - 1}pt`, color: '#444444', lineHeight: 1.5, textAlign: 'justify', marginTop: '8pt' }}>
-                        {personal.summary}
-                    </div>
-                )}
             </div>
 
             {/* 教育经历 */}
@@ -925,7 +939,7 @@ const ResumeGeneratorTool: React.FC = () => {
                     </div>
 
                     {/* 表单区域 */}
-                    <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/50 p-5 min-h-[400px]">
+                    <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/50 p-5">
                         {/* 基本信息 */}
                         {activeSection === 'personal' && (
                             <div className="space-y-4">
@@ -937,7 +951,6 @@ const ResumeGeneratorTool: React.FC = () => {
                                     <FormInput label="所在地" value={resumeData.personal.location} onChange={(v) => updatePersonal('location', v)} placeholder="北京市" />
                                     <FormInput label="网站/GitHub" value={resumeData.personal.website} onChange={(v) => updatePersonal('website', v)} placeholder="github.com/username" />
                                 </div>
-                                <FormTextarea label="个人简介" value={resumeData.personal.summary} onChange={(v) => updatePersonal('summary', v)} placeholder="简要介绍您的背景、技能和职业目标..." rows={3} />
                             </div>
                         )}
 
@@ -1151,25 +1164,6 @@ const FormInput: React.FC<{
             onChange={(e) => onChange(e.target.value)}
             placeholder={placeholder}
             className="w-full px-3 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
-        />
-    </div>
-);
-
-const FormTextarea: React.FC<{
-    label: string;
-    value: string;
-    onChange: (value: string) => void;
-    placeholder?: string;
-    rows?: number;
-}> = ({ label, value, onChange, placeholder, rows = 3 }) => (
-    <div>
-        <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">{label}</label>
-        <textarea
-            value={value}
-            onChange={(e) => onChange(e.target.value)}
-            placeholder={placeholder}
-            rows={rows}
-            className="w-full px-3 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary resize-none"
         />
     </div>
 );
