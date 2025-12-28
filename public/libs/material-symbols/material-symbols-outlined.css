@@ -2,7 +2,9 @@
   font-family: 'Material Symbols Outlined';
   font-style: normal;
   font-weight: 400;
-  src: url(MaterialSymbolsOutlined.ttf) format('truetype');
+  font-display: block;
+  src: url(MaterialSymbolsOutlined.woff2) format('woff2'),
+       url(MaterialSymbolsOutlined.ttf) format('truetype');
 }
 
 .material-symbols-outlined {
