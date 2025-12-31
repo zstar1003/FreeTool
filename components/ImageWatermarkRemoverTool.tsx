@@ -326,6 +326,22 @@ const ImageWatermarkRemoverTool: React.FC = () => {
         document.body.removeChild(a);
     }, [resultUrl, fileName]);
 
+    // 继续编辑 - 将处理结果作为新的编辑图片
+    const handleContinueEdit = useCallback(() => {
+        if (!resultUrl) return;
+
+        // 将处理结果加载为新的图片
+        const img = new Image();
+        img.onload = () => {
+            setImage(img);
+            setImageUrl(resultUrl);
+            setLines([]);
+            setShowResult(false);
+            setResultUrl('');
+        };
+        img.src = resultUrl;
+    }, [resultUrl]);
+
     // 重置
     const handleReset = useCallback(() => {
         setImage(null);
@@ -526,7 +542,7 @@ const ImageWatermarkRemoverTool: React.FC = () => {
                                             <span>下载结果</span>
                                         </button>
                                         <button
-                                            onClick={() => setShowResult(false)}
+                                            onClick={handleContinueEdit}
                                             className="flex h-11 w-full cursor-pointer items-center justify-center gap-2 overflow-hidden rounded-lg px-6 text-sm font-bold bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
                                         >
                                             <span className="material-symbols-outlined">edit</span>
