@@ -42,7 +42,10 @@ const ImageToPromptTool: React.FC = () => {
     useEffect(() => {
         if (!IS_WEBGPU_AVAILABLE) return;
 
-        const worker = new Worker('/florence2.worker.js', { type: 'module' });
+        // 使用 BASE_URL 确保在子目录部署时路径正确
+        const base = import.meta.env.BASE_URL || '/';
+        const workerUrl = `${base}florence2.worker.js`.replace(/\/+/g, '/');
+        const worker = new Worker(workerUrl, { type: 'module' });
 
         worker.onmessage = (e) => {
             const { status: msgStatus, data, progress, file, loaded, total, result: msgResult, time } = e.data;
