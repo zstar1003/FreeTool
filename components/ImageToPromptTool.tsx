@@ -69,9 +69,8 @@ const ImageToPromptTool: React.FC = () => {
                 setProgressItems([]);
             } else if (msgStatus === 'complete') {
                 setStatus('ready');
-                // 提取结果文本
-                const taskKey = taskType.replace('<', '').replace('>', '').toLowerCase();
-                const resultText = msgResult[taskKey] || JSON.stringify(msgResult);
+                // 提取结果文本 - 直接使用 taskType 作为键（如 "<MORE_DETAILED_CAPTION>"）
+                const resultText = msgResult[taskType] || Object.values(msgResult)[0] || JSON.stringify(msgResult);
                 setResult(resultText);
                 setProcessTime(time);
             }
