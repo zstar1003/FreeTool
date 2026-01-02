@@ -120,7 +120,7 @@ const TOOL_CATEGORIES: ToolCategory[] = [
             { id: 'table-converter', name: '表格格式转换', icon: 'table_chart', component: TableConverter },
             { id: 'math-formula', name: '数学公式编辑', icon: 'functions', component: MathFormulaEditor },
             { id: 'mind-map', name: '思维导图', icon: 'account_tree', component: MindMapTool },
-            { id: 'drawing', name: '绘图工具', icon: 'draw', component: DrawingTool },
+            { id: 'drawing', name: '绘图画布', icon: 'draw', component: DrawingTool },
         ],
     },
     {

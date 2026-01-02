@@ -78,6 +78,7 @@ const DrawingTool: React.FC = () => {
     const [copySuccess, setCopySuccess] = useState(false);
     const [isDragging, setIsDragging] = useState(false);
     const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
+    const [pendingEditId, setPendingEditId] = useState<string | null>(null);
 
     const canvasRef = useRef<HTMLDivElement>(null);
     const svgRef = useRef<SVGSVGElement>(null);
@@ -87,6 +88,22 @@ const DrawingTool: React.FC = () => {
     useEffect(() => {
         saveToStorage(state);
     }, [state]);
+
+    // 处理待编辑的文本形状（等待 state 更新后再触发编辑）
+    useEffect(() => {
+        if (pendingEditId) {
+            const shape = state.shapes.find(s => s.id === pendingEditId);
+            if (shape) {
+                setEditingTextId(pendingEditId);
+                setEditText(shape.text);
+                setPendingEditId(null);
+                setTimeout(() => {
+                    inputRef.current?.focus();
+                    inputRef.current?.select();
+                }, 0);
+            }
+        }
+    }, [state.shapes, pendingEditId]);
 
     // 获取鼠标在画布上的位置
     const getCanvasPoint = useCallback((e: React.MouseEvent): Point => {
@@ -275,9 +292,8 @@ const DrawingTool: React.FC = () => {
         if (isDrawing && currentShape) {
             setState(prev => ({ shapes: [...prev.shapes, currentShape] }));
             if (currentShape.type === 'text') {
-                setEditingTextId(currentShape.id);
-                setEditText(currentShape.text);
-                setTimeout(() => inputRef.current?.focus(), 0);
+                // 使用 pendingEditId 来延迟触发编辑，确保 state 已更新
+                setPendingEditId(currentShape.id);
             }
         }
 
@@ -285,6 +301,40 @@ const DrawingTool: React.FC = () => {
         setDrawStart(null);
         setCurrentShape(null);
     }, [isPanning, isDragging, isDrawing, currentShape]);
+
+    // 双击编辑文本
+    const handleDoubleClick = useCallback((e: React.MouseEvent) => {
+        if (selectedTool !== 'select') return;
+
+        const point = getCanvasPoint(e);
+
+        // 找到双击的形状
+        const clickedShape = [...state.shapes].reverse().find(shape => {
+            if (shape.type === 'line' || shape.type === 'arrowLine' || shape.type === 'freehand') {
+                return false; // 这些类型不支持文本编辑
+            }
+            return (
+                point.x >= shape.x &&
+                point.x <= shape.x + shape.width &&
+                point.y >= shape.y &&
+                point.y <= shape.y + shape.height
+            );
+        });
+
+        if (clickedShape) {
+            // 如果是文本形状，直接编辑
+            if (clickedShape.type === 'text') {
+                setEditingTextId(clickedShape.id);
+                setEditText(clickedShape.text);
+                setTimeout(() => inputRef.current?.focus(), 0);
+            } else {
+                // 其他形状也可以添加文本
+                setEditingTextId(clickedShape.id);
+                setEditText(clickedShape.text || '');
+                setTimeout(() => inputRef.current?.focus(), 0);
+            }
+        }
+    }, [selectedTool, getCanvasPoint, state.shapes]);
 
     // 滚轮缩放
     const handleWheel = useCallback((e: React.WheelEvent) => {
@@ -527,9 +577,26 @@ const DrawingTool: React.FC = () => {
 
         if (!element) return null;
 
+        // 判断是否需要显示文本（非文本类型但有文本内容）
+        const showTextOnShape = shape.type !== 'text' && shape.type !== 'line' && shape.type !== 'arrowLine' && shape.type !== 'freehand' && shape.text;
+
         return (
             <g key={key}>
                 {element}
+                {/* 在形状上显示文本 */}
+                {showTextOnShape && (
+                    <text
+                        x={shape.x + shape.width / 2}
+                        y={shape.y + shape.height / 2 + 5}
+                        textAnchor="middle"
+                        fill={shape.stroke}
+                        fontSize="14"
+                        fontFamily="system-ui"
+                        style={{ pointerEvents: 'none' }}
+                    >
+                        {shape.text}
+                    </text>
+                )}
                 {isSelected && shape.type !== 'line' && shape.type !== 'arrowLine' && shape.type !== 'freehand' && (
                     <rect
                         x={shape.x - 4}
@@ -639,7 +706,7 @@ const DrawingTool: React.FC = () => {
         <div className="flex w-full flex-col items-center px-4 py-6 sm:px-6 lg:px-8">
             <div className="flex w-full max-w-7xl flex-col items-center gap-2 text-center mb-6">
                 <p className="text-3xl font-black leading-tight tracking-tighter text-gray-900 dark:text-white sm:text-4xl">
-                    绘图工具
+                    绘图画布
                 </p>
                 <p className="text-base font-normal text-gray-500 dark:text-gray-400">
                     在线绘制流程图、示意图，支持多种形状和连接线
@@ -806,6 +873,7 @@ const DrawingTool: React.FC = () => {
                     onMouseMove={handleMouseMove}
                     onMouseUp={handleMouseUp}
                     onMouseLeave={handleMouseUp}
+                    onDoubleClick={handleDoubleClick}
                     onWheel={handleWheel}
                 >
                     {/* 网格背景 */}
@@ -834,25 +902,32 @@ const DrawingTool: React.FC = () => {
                     </svg>
 
                     {/* 文本编辑 */}
-                    {editingTextId && selectedShape?.type === 'text' && (
-                        <input
-                            ref={inputRef}
-                            type="text"
-                            value={editText}
-                            onChange={e => setEditText(e.target.value)}
-                            onBlur={finishTextEditing}
-                            onKeyDown={e => {
-                                if (e.key === 'Enter') finishTextEditing();
-                                if (e.key === 'Escape') setEditingTextId(null);
-                            }}
-                            className="absolute bg-white border border-primary rounded px-2 py-1 text-sm outline-none"
-                            style={{
-                                left: offset.x + selectedShape.x * scale,
-                                top: offset.y + selectedShape.y * scale,
-                                width: Math.max(100, selectedShape.width * scale),
-                            }}
-                        />
-                    )}
+                    {editingTextId && (() => {
+                        const editingShape = state.shapes.find(s => s.id === editingTextId);
+                        if (!editingShape) return null;
+                        return (
+                            <input
+                                ref={inputRef}
+                                type="text"
+                                value={editText}
+                                onChange={e => setEditText(e.target.value)}
+                                onBlur={finishTextEditing}
+                                onKeyDown={e => {
+                                    if (e.key === 'Enter') finishTextEditing();
+                                    if (e.key === 'Escape') setEditingTextId(null);
+                                }}
+                                className="absolute bg-white dark:bg-gray-800 border-2 border-primary rounded px-2 py-1 text-sm outline-none shadow-lg"
+                                style={{
+                                    left: offset.x + editingShape.x * scale,
+                                    top: offset.y + editingShape.y * scale,
+                                    width: Math.max(120, editingShape.width * scale),
+                                    transform: 'translateY(-50%)',
+                                    marginTop: (editingShape.height * scale) / 2,
+                                }}
+                                placeholder="输入文本..."
+                            />
+                        );
+                    })()}
 
                     {/* 操作提示 */}
                     <div className="absolute bottom-4 left-4 text-xs text-gray-400 dark:text-gray-500 space-y-1">
