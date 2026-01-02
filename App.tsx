@@ -23,6 +23,7 @@ const PromptGeneratorTool = lazy(() => import('./components/PromptGeneratorTool'
 const MBTITestTool = lazy(() => import('./components/MBTITestTool'));
 const ImageToPromptTool = lazy(() => import('./components/ImageToPromptTool'));
 const ImageWatermarkRemoverTool = lazy(() => import('./components/ImageWatermarkRemoverTool'));
+const MindMapTool = lazy(() => import('./components/MindMapTool'));
 
 // 获取资源路径的辅助函数
 const getAssetUrl = (path: string) => {
@@ -55,7 +56,8 @@ type ToolType =
     | 'prompt-generator'
     | 'mbti-test'
     | 'image-to-prompt'
-    | 'image-watermark-remover';
+    | 'image-watermark-remover'
+    | 'mind-map';
 
 type CategoryType = 'text' | 'image' | 'data' | 'media' | 'ai';
 
@@ -115,6 +117,7 @@ const TOOL_CATEGORIES: ToolCategory[] = [
         tools: [
             { id: 'table-converter', name: '表格格式转换', icon: 'table_chart', component: TableConverter },
             { id: 'math-formula', name: '数学公式编辑', icon: 'functions', component: MathFormulaEditor },
+            { id: 'mind-map', name: '思维导图', icon: 'account_tree', component: MindMapTool },
         ],
     },
     {
