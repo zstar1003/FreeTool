@@ -16,23 +16,46 @@ interface MindMapData {
     rootId: string;
 }
 
+// 样式配置
+type LineStyle = 'curve' | 'straight' | 'polyline';
+type NodeShape = 'rounded' | 'rectangle' | 'ellipse';
+type LayoutDirection = 'right' | 'down' | 'mindmap';
+
+interface StyleConfig {
+    lineStyle: LineStyle;
+    nodeShape: NodeShape;
+    layoutDirection: LayoutDirection;
+    theme: string;
+}
+
 const STORAGE_KEY = 'freetool-mindmap-data';
+const STYLE_STORAGE_KEY = 'freetool-mindmap-style';
 
-const COLORS = [
-    '#607AFB', // Primary blue
-    '#10B981', // Green
-    '#F59E0B', // Amber
-    '#EF4444', // Red
-    '#8B5CF6', // Purple
-    '#EC4899', // Pink
-    '#06B6D4', // Cyan
-    '#F97316', // Orange
-];
+// 颜色主题
+const COLOR_THEMES: Record<string, string[]> = {
+    // 多彩主题
+    '默认': ['#607AFB', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899', '#06B6D4', '#F97316'],
+    '清新': ['#22C55E', '#14B8A6', '#06B6D4', '#0EA5E9', '#3B82F6', '#6366F1', '#8B5CF6', '#A855F7'],
+    '暖色': ['#F97316', '#F59E0B', '#EAB308', '#84CC16', '#22C55E', '#10B981', '#14B8A6', '#06B6D4'],
+    '冷色': ['#3B82F6', '#6366F1', '#8B5CF6', '#A855F7', '#D946EF', '#EC4899', '#F43F5E', '#EF4444'],
+    '商务': ['#1E40AF', '#1E3A8A', '#312E81', '#4C1D95', '#581C87', '#701A75', '#831843', '#881337'],
+    '彩虹': ['#EF4444', '#F97316', '#EAB308', '#22C55E', '#14B8A6', '#3B82F6', '#8B5CF6', '#EC4899'],
+    // 纯色主题
+    '纯蓝': ['#3B82F6', '#3B82F6', '#3B82F6', '#3B82F6', '#3B82F6', '#3B82F6', '#3B82F6', '#3B82F6'],
+    '纯绿': ['#10B981', '#10B981', '#10B981', '#10B981', '#10B981', '#10B981', '#10B981', '#10B981'],
+    '纯紫': ['#8B5CF6', '#8B5CF6', '#8B5CF6', '#8B5CF6', '#8B5CF6', '#8B5CF6', '#8B5CF6', '#8B5CF6'],
+    '纯橙': ['#F97316', '#F97316', '#F97316', '#F97316', '#F97316', '#F97316', '#F97316', '#F97316'],
+    '纯红': ['#EF4444', '#EF4444', '#EF4444', '#EF4444', '#EF4444', '#EF4444', '#EF4444', '#EF4444'],
+    '纯青': ['#06B6D4', '#06B6D4', '#06B6D4', '#06B6D4', '#06B6D4', '#06B6D4', '#06B6D4', '#06B6D4'],
+    '纯粉': ['#EC4899', '#EC4899', '#EC4899', '#EC4899', '#EC4899', '#EC4899', '#EC4899', '#EC4899'],
+    '深灰': ['#475569', '#475569', '#475569', '#475569', '#475569', '#475569', '#475569', '#475569'],
+};
 
-const generateId = () => Math.random().toString(36).substr(2, 9);
+const generateId = () => Math.random().toString(36).substring(2, 11);
 
-const createInitialData = (): MindMapData => {
+const createInitialData = (theme: string): MindMapData => {
     const rootId = generateId();
+    const colors = COLOR_THEMES[theme] || COLOR_THEMES['默认'];
     return {
         nodes: {
             [rootId]: {
@@ -42,7 +65,7 @@ const createInitialData = (): MindMapData => {
                 y: 0,
                 parentId: null,
                 children: [],
-                color: COLORS[0],
+                color: colors[0],
                 collapsed: false,
             }
         },
@@ -50,13 +73,36 @@ const createInitialData = (): MindMapData => {
     };
 };
 
-// 从 localStorage 加载数据
+const loadStyleFromStorage = (): StyleConfig => {
+    try {
+        const saved = localStorage.getItem(STYLE_STORAGE_KEY);
+        if (saved) {
+            return JSON.parse(saved) as StyleConfig;
+        }
+    } catch (e) {
+        console.error('Failed to load style config:', e);
+    }
+    return {
+        lineStyle: 'curve',
+        nodeShape: 'rounded',
+        layoutDirection: 'right',
+        theme: '默认',
+    };
+};
+
+const saveStyleToStorage = (style: StyleConfig) => {
+    try {
+        localStorage.setItem(STYLE_STORAGE_KEY, JSON.stringify(style));
+    } catch (e) {
+        console.error('Failed to save style config:', e);
+    }
+};
+
 const loadFromStorage = (): MindMapData | null => {
     try {
         const saved = localStorage.getItem(STORAGE_KEY);
         if (saved) {
             const data = JSON.parse(saved) as MindMapData;
-            // 验证数据完整性
             if (data.rootId && data.nodes && data.nodes[data.rootId]) {
                 return data;
             }
@@ -67,7 +113,6 @@ const loadFromStorage = (): MindMapData | null => {
     return null;
 };
 
-// 保存到 localStorage
 const saveToStorage = (data: MindMapData) => {
     try {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
@@ -77,7 +122,8 @@ const saveToStorage = (data: MindMapData) => {
 };
 
 const MindMapTool: React.FC = () => {
-    const [data, setData] = useState<MindMapData>(() => loadFromStorage() || createInitialData());
+    const [styleConfig, setStyleConfig] = useState<StyleConfig>(loadStyleFromStorage);
+    const [data, setData] = useState<MindMapData>(() => loadFromStorage() || createInitialData(styleConfig.theme));
     const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
     const [editingNodeId, setEditingNodeId] = useState<string | null>(null);
     const [editText, setEditText] = useState('');
@@ -86,64 +132,128 @@ const MindMapTool: React.FC = () => {
     const [isDragging, setIsDragging] = useState(false);
     const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
     const [copySuccess, setCopySuccess] = useState(false);
+    const [showStylePanel, setShowStylePanel] = useState(false);
 
     const canvasRef = useRef<HTMLDivElement>(null);
     const svgRef = useRef<SVGSVGElement>(null);
     const inputRef = useRef<HTMLInputElement>(null);
+
+    const colors = COLOR_THEMES[styleConfig.theme] || COLOR_THEMES['默认'];
+
+    // 更新样式配置
+    const updateStyleConfig = useCallback((updates: Partial<StyleConfig>) => {
+        setStyleConfig(prev => {
+            const newConfig = { ...prev, ...updates };
+            saveStyleToStorage(newConfig);
+
+            // 如果更改了颜色主题，更新所有节点的颜色
+            if (updates.theme && updates.theme !== prev.theme) {
+                const newColors = COLOR_THEMES[updates.theme] || COLOR_THEMES['默认'];
+                setData(prevData => {
+                    const newNodes = { ...prevData.nodes };
+                    const rootNode = newNodes[prevData.rootId];
+
+                    // 更新根节点颜色
+                    if (rootNode) {
+                        newNodes[prevData.rootId] = { ...rootNode, color: newColors[0] };
+                    }
+
+                    // 更新子节点颜色（按分支分配颜色）
+                    let branchIndex = 0;
+                    rootNode?.children.forEach(childId => {
+                        const branchColor = newColors[branchIndex % newColors.length];
+                        branchIndex++;
+
+                        // 递归更新整个分支的颜色
+                        const updateBranchColor = (nodeId: string, color: string) => {
+                            const node = newNodes[nodeId];
+                            if (node) {
+                                newNodes[nodeId] = { ...node, color };
+                                node.children.forEach(cId => updateBranchColor(cId, color));
+                            }
+                        };
+                        updateBranchColor(childId, branchColor);
+                    });
+
+                    const updatedData = { ...prevData, nodes: newNodes };
+                    saveToStorage(updatedData);
+                    return updatedData;
+                });
+            }
+
+            return newConfig;
+        });
+    }, []);
 
     // 自动布局算法
     const calculateLayout = useCallback((nodeId: string, nodes: Record<string, MindMapNode>, depth: number = 0, yOffset: number = 0): number => {
         const node = nodes[nodeId];
         if (!node) return yOffset;
 
-        const horizontalSpacing = 200;
-        const verticalSpacing = 70;
+        const isVertical = styleConfig.layoutDirection === 'down';
+        const horizontalSpacing = isVertical ? 80 : 200;
+        const verticalSpacing = isVertical ? 100 : 70;
 
-        node.x = depth * horizontalSpacing;
-
-        if (node.collapsed || node.children.length === 0) {
-            node.y = yOffset;
-            return yOffset + verticalSpacing;
+        if (isVertical) {
+            node.y = depth * verticalSpacing;
+        } else {
+            node.x = depth * horizontalSpacing;
         }
 
-        let currentY = yOffset;
-        const childYPositions: number[] = [];
+        if (node.collapsed || node.children.length === 0) {
+            if (isVertical) {
+                node.x = yOffset;
+            } else {
+                node.y = yOffset;
+            }
+            return yOffset + (isVertical ? 150 : verticalSpacing);
+        }
+
+        let currentOffset = yOffset;
+        const childPositions: number[] = [];
 
         for (const childId of node.children) {
-            currentY = calculateLayout(childId, nodes, depth + 1, currentY);
+            currentOffset = calculateLayout(childId, nodes, depth + 1, currentOffset);
             const childNode = nodes[childId];
             if (childNode) {
-                childYPositions.push(childNode.y);
+                childPositions.push(isVertical ? childNode.x : childNode.y);
             }
         }
 
-        // 父节点居中于子节点
-        if (childYPositions.length > 0) {
-            const minY = Math.min(...childYPositions);
-            const maxY = Math.max(...childYPositions);
-            node.y = (minY + maxY) / 2;
+        if (childPositions.length > 0) {
+            const minPos = Math.min(...childPositions);
+            const maxPos = Math.max(...childPositions);
+            if (isVertical) {
+                node.x = (minPos + maxPos) / 2;
+            } else {
+                node.y = (minPos + maxPos) / 2;
+            }
         } else {
-            node.y = yOffset;
+            if (isVertical) {
+                node.x = yOffset;
+            } else {
+                node.y = yOffset;
+            }
         }
 
-        return currentY;
-    }, []);
+        return currentOffset;
+    }, [styleConfig.layoutDirection]);
 
-    // 应用布局并保存
     const applyLayoutAndSave = useCallback((newData: MindMapData) => {
         const nodes = { ...newData.nodes };
+        Object.keys(nodes).forEach(key => {
+            nodes[key] = { ...nodes[key] };
+        });
         calculateLayout(newData.rootId, nodes, 0, 0);
         const updatedData = { ...newData, nodes };
         saveToStorage(updatedData);
         return updatedData;
     }, [calculateLayout]);
 
-    // 初始化时应用布局
     useEffect(() => {
         setData(prev => applyLayoutAndSave(prev));
-    }, []);
+    }, [styleConfig.layoutDirection]);
 
-    // 添加子节点
     const addChildNode = useCallback((parentId: string) => {
         setData(prev => {
             const parent = prev.nodes[parentId];
@@ -151,7 +261,7 @@ const MindMapTool: React.FC = () => {
 
             const newId = generateId();
             const nodeCount = Object.keys(prev.nodes).length;
-            const colorIndex = nodeCount % COLORS.length;
+            const colorIndex = nodeCount % colors.length;
 
             const newNode: MindMapNode = {
                 id: newId,
@@ -160,7 +270,7 @@ const MindMapTool: React.FC = () => {
                 y: 0,
                 parentId: parentId,
                 children: [],
-                color: parent.parentId === null ? COLORS[colorIndex] : parent.color,
+                color: parent.parentId === null ? colors[colorIndex] : parent.color,
                 collapsed: false,
             };
 
@@ -176,9 +286,8 @@ const MindMapTool: React.FC = () => {
 
             return applyLayoutAndSave({ ...prev, nodes: updatedNodes });
         });
-    }, [applyLayoutAndSave]);
+    }, [applyLayoutAndSave, colors]);
 
-    // 删除节点及其所有子节点
     const deleteNode = useCallback((nodeId: string) => {
         setData(prev => {
             const node = prev.nodes[nodeId];
@@ -186,7 +295,6 @@ const MindMapTool: React.FC = () => {
 
             const newNodes = { ...prev.nodes };
 
-            // 递归删除所有子节点
             const deleteRecursive = (id: string) => {
                 const n = newNodes[id];
                 if (n) {
@@ -196,7 +304,6 @@ const MindMapTool: React.FC = () => {
             };
             deleteRecursive(nodeId);
 
-            // 从父节点中移除
             const parent = newNodes[node.parentId];
             if (parent) {
                 newNodes[node.parentId] = {
@@ -210,7 +317,6 @@ const MindMapTool: React.FC = () => {
         setSelectedNodeId(null);
     }, [applyLayoutAndSave]);
 
-    // 开始编辑节点
     const startEditing = useCallback((nodeId: string) => {
         const node = data.nodes[nodeId];
         if (node) {
@@ -220,7 +326,6 @@ const MindMapTool: React.FC = () => {
         }
     }, [data.nodes]);
 
-    // 完成编辑
     const finishEditing = useCallback(() => {
         if (editingNodeId && editText.trim()) {
             setData(prev => {
@@ -241,7 +346,6 @@ const MindMapTool: React.FC = () => {
         setEditText('');
     }, [editingNodeId, editText]);
 
-    // 切换折叠状态
     const toggleCollapse = useCallback((nodeId: string) => {
         setData(prev => {
             const node = prev.nodes[nodeId];
@@ -256,14 +360,12 @@ const MindMapTool: React.FC = () => {
         });
     }, [applyLayoutAndSave]);
 
-    // 鼠标滚轮缩放
     const handleWheel = useCallback((e: React.WheelEvent) => {
         e.preventDefault();
         const delta = e.deltaY > 0 ? 0.9 : 1.1;
         setScale(prev => Math.max(0.3, Math.min(3, prev * delta)));
     }, []);
 
-    // 开始拖拽画布
     const handleCanvasMouseDown = useCallback((e: React.MouseEvent) => {
         if (e.target === canvasRef.current || e.target === svgRef.current) {
             setIsDragging(true);
@@ -272,7 +374,6 @@ const MindMapTool: React.FC = () => {
         }
     }, [offset]);
 
-    // 拖拽画布
     const handleMouseMove = useCallback((e: React.MouseEvent) => {
         if (isDragging) {
             setOffset({
@@ -282,14 +383,11 @@ const MindMapTool: React.FC = () => {
         }
     }, [isDragging, dragStart]);
 
-    // 结束拖拽
     const handleMouseUp = useCallback(() => {
         setIsDragging(false);
     }, []);
 
-    // 计算所有可见节点的边界
     const calculateBounds = useCallback(() => {
-        const nodes = Object.values(data.nodes);
         let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
 
         const collectVisibleNodes = (nodeId: string) => {
@@ -315,9 +413,50 @@ const MindMapTool: React.FC = () => {
         return { minX, minY, maxX, maxY };
     }, [data]);
 
-    // 导出为PNG - 重新生成干净的SVG
+    // 生成连接线路径
+    const getLinePath = useCallback((startX: number, startY: number, endX: number, endY: number) => {
+        const isVertical = styleConfig.layoutDirection === 'down';
+
+        switch (styleConfig.lineStyle) {
+            case 'straight':
+                return `M ${startX} ${startY} L ${endX} ${endY}`;
+            case 'polyline':
+                if (isVertical) {
+                    const midY = (startY + endY) / 2;
+                    return `M ${startX} ${startY} L ${startX} ${midY} L ${endX} ${midY} L ${endX} ${endY}`;
+                } else {
+                    const midX = (startX + endX) / 2;
+                    return `M ${startX} ${startY} L ${midX} ${startY} L ${midX} ${endY} L ${endX} ${endY}`;
+                }
+            case 'curve':
+            default:
+                if (isVertical) {
+                    const midY = (startY + endY) / 2;
+                    return `M ${startX} ${startY} C ${startX} ${midY}, ${endX} ${midY}, ${endX} ${endY}`;
+                } else {
+                    const midX = (startX + endX) / 2;
+                    return `M ${startX} ${startY} C ${midX} ${startY}, ${midX} ${endY}, ${endX} ${endY}`;
+                }
+        }
+    }, [styleConfig.lineStyle, styleConfig.layoutDirection]);
+
+    // 获取节点形状属性
+    const getNodeShapeAttrs = useCallback((_isRoot?: boolean) => {
+        const nodeWidth = 140;
+        const nodeHeight = 44;
+
+        switch (styleConfig.nodeShape) {
+            case 'rectangle':
+                return { rx: 4, ry: 4, width: nodeWidth, height: nodeHeight };
+            case 'ellipse':
+                return { rx: nodeWidth / 2, ry: nodeHeight / 2, width: nodeWidth, height: nodeHeight };
+            case 'rounded':
+            default:
+                return { rx: 22, ry: 22, width: nodeWidth, height: nodeHeight };
+        }
+    }, [styleConfig.nodeShape]);
+
     const exportToPNG = useCallback(async () => {
-        // 先结束编辑状态
         if (editingNodeId) {
             finishEditing();
         }
@@ -326,15 +465,14 @@ const MindMapTool: React.FC = () => {
         const padding = 50;
         const width = bounds.maxX - bounds.minX + padding * 2;
         const height = bounds.maxY - bounds.minY + padding * 2;
+        const isVertical = styleConfig.layoutDirection === 'down';
 
-        // 创建新的 SVG 元素
         const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
         svg.setAttribute('width', String(width));
         svg.setAttribute('height', String(height));
         svg.setAttribute('viewBox', `${bounds.minX - padding} ${bounds.minY - padding} ${width} ${height}`);
         svg.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
 
-        // 白色背景
         const bg = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
         bg.setAttribute('x', String(bounds.minX - padding));
         bg.setAttribute('y', String(bounds.minY - padding));
@@ -343,7 +481,8 @@ const MindMapTool: React.FC = () => {
         bg.setAttribute('fill', 'white');
         svg.appendChild(bg);
 
-        // 绘制连接线
+        const shapeAttrs = getNodeShapeAttrs(false);
+
         const drawConnections = (nodeId: string) => {
             const node = data.nodes[nodeId];
             if (!node || node.collapsed) return;
@@ -351,14 +490,22 @@ const MindMapTool: React.FC = () => {
             node.children.forEach(childId => {
                 const child = data.nodes[childId];
                 if (child) {
-                    const startX = node.x + 70;
-                    const startY = node.y;
-                    const endX = child.x - 70;
-                    const endY = child.y;
-                    const midX = (startX + endX) / 2;
+                    let startX: number, startY: number, endX: number, endY: number;
+
+                    if (isVertical) {
+                        startX = node.x;
+                        startY = node.y + shapeAttrs.height / 2;
+                        endX = child.x;
+                        endY = child.y - shapeAttrs.height / 2;
+                    } else {
+                        startX = node.x + shapeAttrs.width / 2;
+                        startY = node.y;
+                        endX = child.x - shapeAttrs.width / 2;
+                        endY = child.y;
+                    }
 
                     const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-                    path.setAttribute('d', `M ${startX} ${startY} C ${midX} ${startY}, ${midX} ${endY}, ${endX} ${endY}`);
+                    path.setAttribute('d', getLinePath(startX, startY, endX, endY));
                     path.setAttribute('fill', 'none');
                     path.setAttribute('stroke', child.color);
                     path.setAttribute('stroke-width', '2');
@@ -371,7 +518,6 @@ const MindMapTool: React.FC = () => {
         };
         drawConnections(data.rootId);
 
-        // 绘制节点
         const drawNodes = (nodeId: string) => {
             const node = data.nodes[nodeId];
             if (!node) return;
@@ -380,19 +526,31 @@ const MindMapTool: React.FC = () => {
             const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
             g.setAttribute('transform', `translate(${node.x}, ${node.y})`);
 
-            // 节点背景
-            const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-            rect.setAttribute('x', '-70');
-            rect.setAttribute('y', '-22');
-            rect.setAttribute('width', '140');
-            rect.setAttribute('height', '44');
-            rect.setAttribute('rx', '22');
-            rect.setAttribute('fill', isRoot ? node.color : 'white');
-            rect.setAttribute('stroke', node.color);
-            rect.setAttribute('stroke-width', '2');
-            g.appendChild(rect);
+            const nodeShapeAttrs = getNodeShapeAttrs(isRoot);
 
-            // 节点文本
+            if (styleConfig.nodeShape === 'ellipse') {
+                const ellipse = document.createElementNS('http://www.w3.org/2000/svg', 'ellipse');
+                ellipse.setAttribute('cx', '0');
+                ellipse.setAttribute('cy', '0');
+                ellipse.setAttribute('rx', String(nodeShapeAttrs.width / 2));
+                ellipse.setAttribute('ry', String(nodeShapeAttrs.height / 2));
+                ellipse.setAttribute('fill', isRoot ? node.color : 'white');
+                ellipse.setAttribute('stroke', node.color);
+                ellipse.setAttribute('stroke-width', '2');
+                g.appendChild(ellipse);
+            } else {
+                const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+                rect.setAttribute('x', String(-nodeShapeAttrs.width / 2));
+                rect.setAttribute('y', String(-nodeShapeAttrs.height / 2));
+                rect.setAttribute('width', String(nodeShapeAttrs.width));
+                rect.setAttribute('height', String(nodeShapeAttrs.height));
+                rect.setAttribute('rx', String(nodeShapeAttrs.rx));
+                rect.setAttribute('fill', isRoot ? node.color : 'white');
+                rect.setAttribute('stroke', node.color);
+                rect.setAttribute('stroke-width', '2');
+                g.appendChild(rect);
+            }
+
             const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
             text.setAttribute('x', '0');
             text.setAttribute('y', '5');
@@ -405,45 +563,14 @@ const MindMapTool: React.FC = () => {
             text.textContent = displayText;
             g.appendChild(text);
 
-            // 折叠指示器
-            if (node.collapsed && node.children.length > 0) {
-                const indicator = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-                indicator.setAttribute('cx', '75');
-                indicator.setAttribute('cy', '0');
-                indicator.setAttribute('r', '10');
-                indicator.setAttribute('fill', node.color);
-                indicator.setAttribute('opacity', '0.8');
-                g.appendChild(indicator);
-
-                const plus = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-                plus.setAttribute('x', '75');
-                plus.setAttribute('y', '4');
-                plus.setAttribute('text-anchor', 'middle');
-                plus.setAttribute('fill', 'white');
-                plus.setAttribute('font-size', '14');
-                plus.setAttribute('font-weight', 'bold');
-                plus.textContent = '+';
-                g.appendChild(plus);
-
-                const count = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-                count.setAttribute('x', '95');
-                count.setAttribute('y', '5');
-                count.setAttribute('font-size', '12');
-                count.setAttribute('fill', '#999');
-                count.textContent = `(${node.children.length})`;
-                g.appendChild(count);
-            }
-
             svg.appendChild(g);
 
-            // 递归绘制子节点
             if (!node.collapsed) {
                 node.children.forEach(drawNodes);
             }
         };
         drawNodes(data.rootId);
 
-        // 转换为图片
         const svgData = new XMLSerializer().serializeToString(svg);
         const svgBlob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' });
         const svgUrl = URL.createObjectURL(svgBlob);
@@ -451,12 +578,12 @@ const MindMapTool: React.FC = () => {
         const img = new Image();
         img.onload = () => {
             const canvas = document.createElement('canvas');
-            const scale = 2; // 2x for better quality
-            canvas.width = width * scale;
-            canvas.height = height * scale;
+            const exportScale = 2;
+            canvas.width = width * exportScale;
+            canvas.height = height * exportScale;
             const ctx = canvas.getContext('2d');
             if (ctx) {
-                ctx.scale(scale, scale);
+                ctx.scale(exportScale, exportScale);
                 ctx.drawImage(img, 0, 0);
                 canvas.toBlob(blob => {
                     if (blob) {
@@ -475,27 +602,26 @@ const MindMapTool: React.FC = () => {
 
         setCopySuccess(true);
         setTimeout(() => setCopySuccess(false), 2000);
-    }, [data, editingNodeId, finishEditing, calculateBounds]);
+    }, [data, editingNodeId, finishEditing, calculateBounds, styleConfig, getLinePath, getNodeShapeAttrs]);
 
-    // 重置画布位置
     const resetView = useCallback(() => {
         setScale(1);
         setOffset({ x: 0, y: 0 });
     }, []);
 
-    // 清空并重新开始
     const resetMindMap = useCallback(() => {
-        const newData = createInitialData();
+        const newData = createInitialData(styleConfig.theme);
         setData(applyLayoutAndSave(newData));
         setSelectedNodeId(null);
         setEditingNodeId(null);
         setScale(1);
         setOffset({ x: 0, y: 0 });
-    }, [applyLayoutAndSave]);
+    }, [applyLayoutAndSave, styleConfig.theme]);
 
-    // 渲染连接线
     const renderConnections = () => {
-        const lines: JSX.Element[] = [];
+        const lines: React.ReactElement[] = [];
+        const isVertical = styleConfig.layoutDirection === 'down';
+        const shapeAttrs = getNodeShapeAttrs(false);
 
         const drawConnections = (nodeId: string) => {
             const node = data.nodes[nodeId];
@@ -504,16 +630,24 @@ const MindMapTool: React.FC = () => {
             node.children.forEach(childId => {
                 const child = data.nodes[childId];
                 if (child) {
-                    const startX = node.x + 70;
-                    const startY = node.y;
-                    const endX = child.x - 70;
-                    const endY = child.y;
-                    const midX = (startX + endX) / 2;
+                    let startX: number, startY: number, endX: number, endY: number;
+
+                    if (isVertical) {
+                        startX = node.x;
+                        startY = node.y + shapeAttrs.height / 2;
+                        endX = child.x;
+                        endY = child.y - shapeAttrs.height / 2;
+                    } else {
+                        startX = node.x + shapeAttrs.width / 2;
+                        startY = node.y;
+                        endX = child.x - shapeAttrs.width / 2;
+                        endY = child.y;
+                    }
 
                     lines.push(
                         <path
                             key={`${nodeId}-${childId}`}
-                            d={`M ${startX} ${startY} C ${midX} ${startY}, ${midX} ${endY}, ${endX} ${endY}`}
+                            d={getLinePath(startX, startY, endX, endY)}
                             fill="none"
                             stroke={child.color}
                             strokeWidth="2"
@@ -530,9 +664,8 @@ const MindMapTool: React.FC = () => {
         return lines;
     };
 
-    // 渲染节点
     const renderNodes = () => {
-        const nodeElements: JSX.Element[] = [];
+        const nodeElements: React.ReactElement[] = [];
 
         const renderNode = (nodeId: string) => {
             const node = data.nodes[nodeId];
@@ -542,25 +675,40 @@ const MindMapTool: React.FC = () => {
             const isEditing = editingNodeId === nodeId;
             const isRoot = node.parentId === null;
             const hasChildren = node.children.length > 0;
+            const shapeAttrs = getNodeShapeAttrs(isRoot);
+            const isVertical = styleConfig.layoutDirection === 'down';
 
             nodeElements.push(
                 <g key={nodeId} transform={`translate(${node.x}, ${node.y})`}>
-                    {/* 节点背景 */}
-                    <rect
-                        x="-70"
-                        y="-22"
-                        width="140"
-                        height="44"
-                        rx="22"
-                        fill={isRoot ? node.color : 'white'}
-                        stroke={node.color}
-                        strokeWidth={isSelected ? 3 : 2}
-                        className="cursor-pointer transition-all"
-                        onClick={() => setSelectedNodeId(nodeId)}
-                        onDoubleClick={() => startEditing(nodeId)}
-                    />
+                    {styleConfig.nodeShape === 'ellipse' ? (
+                        <ellipse
+                            cx="0"
+                            cy="0"
+                            rx={shapeAttrs.width / 2}
+                            ry={shapeAttrs.height / 2}
+                            fill={isRoot ? node.color : 'white'}
+                            stroke={node.color}
+                            strokeWidth={isSelected ? 3 : 2}
+                            className="cursor-pointer transition-all"
+                            onClick={() => setSelectedNodeId(nodeId)}
+                            onDoubleClick={() => startEditing(nodeId)}
+                        />
+                    ) : (
+                        <rect
+                            x={-shapeAttrs.width / 2}
+                            y={-shapeAttrs.height / 2}
+                            width={shapeAttrs.width}
+                            height={shapeAttrs.height}
+                            rx={shapeAttrs.rx}
+                            fill={isRoot ? node.color : 'white'}
+                            stroke={node.color}
+                            strokeWidth={isSelected ? 3 : 2}
+                            className="cursor-pointer transition-all"
+                            onClick={() => setSelectedNodeId(nodeId)}
+                            onDoubleClick={() => startEditing(nodeId)}
+                        />
+                    )}
 
-                    {/* 节点文本或输入框 */}
                     {isEditing ? (
                         <foreignObject x="-65" y="-15" width="130" height="30">
                             <input
@@ -594,10 +742,9 @@ const MindMapTool: React.FC = () => {
                         </text>
                     )}
 
-                    {/* 折叠/展开按钮 */}
                     {hasChildren && (
                         <g
-                            transform="translate(75, 0)"
+                            transform={isVertical ? `translate(0, ${shapeAttrs.height / 2 + 5})` : `translate(${shapeAttrs.width / 2 + 5}, 0)`}
                             className="cursor-pointer"
                             onClick={(e) => {
                                 e.stopPropagation();
@@ -618,11 +765,10 @@ const MindMapTool: React.FC = () => {
                         </g>
                     )}
 
-                    {/* 折叠时显示子节点数量 */}
                     {node.collapsed && hasChildren && (
                         <text
-                            x="95"
-                            y="5"
+                            x={isVertical ? 20 : shapeAttrs.width / 2 + 25}
+                            y={isVertical ? shapeAttrs.height / 2 + 8 : 5}
                             fontSize="12"
                             fill="#999"
                         >
@@ -632,7 +778,6 @@ const MindMapTool: React.FC = () => {
                 </g>
             );
 
-            // 递归渲染子节点
             if (!node.collapsed) {
                 node.children.forEach(renderNode);
             }
@@ -642,7 +787,6 @@ const MindMapTool: React.FC = () => {
         return nodeElements;
     };
 
-    // 计算 SVG 视图
     const bounds = calculateBounds();
     const viewWidth = Math.max(800, bounds.maxX - bounds.minX + 200);
     const viewHeight = Math.max(600, bounds.maxY - bounds.minY + 200);
@@ -656,11 +800,10 @@ const MindMapTool: React.FC = () => {
                     思维导图
                 </p>
                 <p className="text-base font-normal text-gray-500 dark:text-gray-400">
-                    在线创建和编辑思维导图，双击编辑节点，支持导出为 PNG 图片
+                    在线创建和编辑思维导图，支持多种样式和布局
                 </p>
             </div>
 
-            {/* 成功提示 */}
             {copySuccess && (
                 <div className="fixed top-8 left-1/2 -translate-x-1/2 z-50 animate-fade-in-down">
                     <div className="bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg flex items-center gap-2">
@@ -696,6 +839,21 @@ const MindMapTool: React.FC = () => {
                     >
                         <span className="material-symbols-outlined text-base">edit</span>
                         编辑文字
+                    </button>
+
+                    <div className="h-6 w-px bg-gray-200 dark:bg-gray-700 mx-1" />
+
+                    {/* 样式按钮 */}
+                    <button
+                        onClick={() => setShowStylePanel(!showStylePanel)}
+                        className={`flex items-center gap-1 px-3 py-1.5 rounded text-sm transition-colors ${
+                            showStylePanel
+                                ? 'bg-primary text-white'
+                                : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                        }`}
+                    >
+                        <span className="material-symbols-outlined text-base">palette</span>
+                        样式设置
                     </button>
 
                     <div className="flex-1" />
@@ -743,61 +901,176 @@ const MindMapTool: React.FC = () => {
                     </button>
                 </div>
 
-                {/* 画布区域 */}
-                <div
-                    ref={canvasRef}
-                    className="relative bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-b-xl overflow-hidden cursor-grab active:cursor-grabbing"
-                    style={{ height: '600px' }}
-                    onWheel={handleWheel}
-                    onMouseDown={handleCanvasMouseDown}
-                    onMouseMove={handleMouseMove}
-                    onMouseUp={handleMouseUp}
-                    onMouseLeave={handleMouseUp}
-                >
-                    {/* 网格背景 */}
+                {/* 主内容区：画布 + 侧边栏 */}
+                <div className="flex rounded-b-xl overflow-hidden border border-t-0 border-gray-200 dark:border-gray-700">
+                    {/* 画布区域 */}
                     <div
-                        className="absolute inset-0 opacity-30 dark:opacity-10"
-                        style={{
-                            backgroundImage: `
-                                linear-gradient(to right, #e5e7eb 1px, transparent 1px),
-                                linear-gradient(to bottom, #e5e7eb 1px, transparent 1px)
-                            `,
-                            backgroundSize: `${20 * scale}px ${20 * scale}px`,
-                            backgroundPosition: `${offset.x}px ${offset.y}px`,
-                        }}
-                    />
-
-                    <svg
-                        ref={svgRef}
-                        className="absolute inset-0 w-full h-full"
-                        viewBox={`${centerX - viewWidth / 2} ${centerY - viewHeight / 2} ${viewWidth} ${viewHeight}`}
-                        style={{
-                            transform: `translate(${offset.x}px, ${offset.y}px) scale(${scale})`,
-                            transformOrigin: 'center center',
-                        }}
+                        ref={canvasRef}
+                        className="relative flex-1 bg-gray-50 dark:bg-gray-900 overflow-hidden cursor-grab active:cursor-grabbing"
+                        style={{ height: '600px' }}
+                        onWheel={handleWheel}
+                        onMouseDown={handleCanvasMouseDown}
+                        onMouseMove={handleMouseMove}
+                        onMouseUp={handleMouseUp}
+                        onMouseLeave={handleMouseUp}
                     >
-                        {renderConnections()}
-                        {renderNodes()}
-                    </svg>
+                        <div
+                            className="absolute inset-0 opacity-30 dark:opacity-10"
+                            style={{
+                                backgroundImage: `
+                                    linear-gradient(to right, #e5e7eb 1px, transparent 1px),
+                                    linear-gradient(to bottom, #e5e7eb 1px, transparent 1px)
+                                `,
+                                backgroundSize: `${20 * scale}px ${20 * scale}px`,
+                                backgroundPosition: `${offset.x}px ${offset.y}px`,
+                            }}
+                        />
 
-                    {/* 操作提示 */}
-                    <div className="absolute bottom-4 left-4 text-xs text-gray-400 dark:text-gray-500 space-y-1">
-                        <p>鼠标滚轮缩放 | 拖拽移动画布</p>
-                        <p>单击选中节点 | 双击编辑文字</p>
+                        <svg
+                            ref={svgRef}
+                            className="absolute inset-0 w-full h-full"
+                            viewBox={`${centerX - viewWidth / 2} ${centerY - viewHeight / 2} ${viewWidth} ${viewHeight}`}
+                            style={{
+                                transform: `translate(${offset.x}px, ${offset.y}px) scale(${scale})`,
+                                transformOrigin: 'center center',
+                            }}
+                        >
+                            {renderConnections()}
+                            {renderNodes()}
+                        </svg>
+
+                        <div className="absolute bottom-4 left-4 text-xs text-gray-400 dark:text-gray-500 space-y-1">
+                            <p>鼠标滚轮缩放 | 拖拽移动画布</p>
+                            <p>单击选中节点 | 双击编辑文字</p>
+                        </div>
+
+                        {selectedNodeId && !showStylePanel && (
+                            <div className="absolute top-4 right-4 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 p-3 text-sm">
+                                <p className="text-gray-500 dark:text-gray-400 mb-1">选中节点:</p>
+                                <p className="font-medium text-gray-900 dark:text-white">
+                                    {data.nodes[selectedNodeId]?.text}
+                                </p>
+                            </div>
+                        )}
                     </div>
 
-                    {/* 选中节点信息 */}
-                    {selectedNodeId && (
-                        <div className="absolute top-4 right-4 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 p-3 text-sm">
-                            <p className="text-gray-500 dark:text-gray-400 mb-1">选中节点:</p>
-                            <p className="font-medium text-gray-900 dark:text-white">
-                                {data.nodes[selectedNodeId]?.text}
-                            </p>
+                    {/* 右侧样式面板 */}
+                    {showStylePanel && (
+                        <div className="w-64 bg-white dark:bg-gray-800 border-l border-gray-200 dark:border-gray-700 p-4 overflow-y-auto" style={{ height: '600px' }}>
+                            <div className="space-y-5">
+                                {/* 颜色主题 */}
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">颜色主题</label>
+                                    <div className="grid grid-cols-2 gap-2">
+                                        {Object.entries(COLOR_THEMES).map(([name, themeColors]) => (
+                                            <button
+                                                key={name}
+                                                onClick={() => updateStyleConfig({ theme: name })}
+                                                className={`flex items-center gap-1.5 px-2 py-1.5 rounded text-xs transition-all ${
+                                                    styleConfig.theme === name
+                                                        ? 'ring-2 ring-primary ring-offset-1 bg-primary/5'
+                                                        : 'hover:bg-gray-100 dark:hover:bg-gray-700'
+                                                }`}
+                                                title={name}
+                                            >
+                                                <div className="flex shrink-0">
+                                                    {themeColors.slice(0, 3).map((c, i) => (
+                                                        <div
+                                                            key={i}
+                                                            className="w-3 h-3 rounded-full -ml-1 first:ml-0 border border-white dark:border-gray-800"
+                                                            style={{ backgroundColor: c }}
+                                                        />
+                                                    ))}
+                                                </div>
+                                                <span className="text-gray-600 dark:text-gray-400 truncate">{name}</span>
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                {/* 连接线样式 */}
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">连接线</label>
+                                    <div className="grid grid-cols-3 gap-2">
+                                        {[
+                                            { id: 'curve', label: '曲线', icon: 'M 0 12 C 12 12, 12 0, 24 0' },
+                                            { id: 'straight', label: '直线', icon: 'M 0 12 L 24 0' },
+                                            { id: 'polyline', label: '折线', icon: 'M 0 12 L 12 12 L 12 0 L 24 0' },
+                                        ].map(style => (
+                                            <button
+                                                key={style.id}
+                                                onClick={() => updateStyleConfig({ lineStyle: style.id as LineStyle })}
+                                                className={`flex flex-col items-center gap-1 p-2 rounded text-xs transition-all ${
+                                                    styleConfig.lineStyle === style.id
+                                                        ? 'bg-primary/10 text-primary ring-1 ring-primary'
+                                                        : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600'
+                                                }`}
+                                            >
+                                                <svg width="24" height="14" viewBox="0 0 24 14">
+                                                    <path d={style.icon} fill="none" stroke="currentColor" strokeWidth="2" />
+                                                </svg>
+                                                <span>{style.label}</span>
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                {/* 节点形状 */}
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">节点形状</label>
+                                    <div className="grid grid-cols-3 gap-2">
+                                        {[
+                                            { id: 'rounded', label: '圆角' },
+                                            { id: 'rectangle', label: '方形' },
+                                            { id: 'ellipse', label: '椭圆' },
+                                        ].map(shape => (
+                                            <button
+                                                key={shape.id}
+                                                onClick={() => updateStyleConfig({ nodeShape: shape.id as NodeShape })}
+                                                className={`flex flex-col items-center gap-1 p-2 rounded text-xs transition-all ${
+                                                    styleConfig.nodeShape === shape.id
+                                                        ? 'bg-primary/10 text-primary ring-1 ring-primary'
+                                                        : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600'
+                                                }`}
+                                            >
+                                                <svg width="32" height="18" viewBox="0 0 32 18">
+                                                    {shape.id === 'rounded' && <rect x="1" y="1" width="30" height="16" rx="8" fill="none" stroke="currentColor" strokeWidth="2" />}
+                                                    {shape.id === 'rectangle' && <rect x="1" y="1" width="30" height="16" rx="2" fill="none" stroke="currentColor" strokeWidth="2" />}
+                                                    {shape.id === 'ellipse' && <ellipse cx="16" cy="9" rx="15" ry="8" fill="none" stroke="currentColor" strokeWidth="2" />}
+                                                </svg>
+                                                <span>{shape.label}</span>
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                {/* 布局方向 */}
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">布局方向</label>
+                                    <div className="grid grid-cols-2 gap-2">
+                                        {[
+                                            { id: 'right', label: '向右', icon: 'arrow_forward' },
+                                            { id: 'down', label: '向下', icon: 'arrow_downward' },
+                                        ].map(dir => (
+                                            <button
+                                                key={dir.id}
+                                                onClick={() => updateStyleConfig({ layoutDirection: dir.id as LayoutDirection })}
+                                                className={`flex items-center justify-center gap-1 px-3 py-2 rounded text-xs transition-all ${
+                                                    styleConfig.layoutDirection === dir.id
+                                                        ? 'bg-primary/10 text-primary ring-1 ring-primary'
+                                                        : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600'
+                                                }`}
+                                            >
+                                                <span className="material-symbols-outlined text-base">{dir.icon}</span>
+                                                <span>{dir.label}</span>
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     )}
                 </div>
-
-                    
             </div>
         </div>
     );
