@@ -11,10 +11,12 @@ interface MindMapNode {
     collapsed: boolean;
 }
 
-interface MindMapState {
-    nodes: Map<string, MindMapNode>;
+interface MindMapData {
+    nodes: Record<string, MindMapNode>;
     rootId: string;
 }
+
+const STORAGE_KEY = 'freetool-mindmap-data';
 
 const COLORS = [
     '#607AFB', // Primary blue
@@ -29,24 +31,53 @@ const COLORS = [
 
 const generateId = () => Math.random().toString(36).substr(2, 9);
 
-const createInitialState = (): MindMapState => {
+const createInitialData = (): MindMapData => {
     const rootId = generateId();
-    const nodes = new Map<string, MindMapNode>();
-    nodes.set(rootId, {
-        id: rootId,
-        text: '中心主题',
-        x: 0,
-        y: 0,
-        parentId: null,
-        children: [],
-        color: COLORS[0],
-        collapsed: false,
-    });
-    return { nodes, rootId };
+    return {
+        nodes: {
+            [rootId]: {
+                id: rootId,
+                text: '中心主题',
+                x: 0,
+                y: 0,
+                parentId: null,
+                children: [],
+                color: COLORS[0],
+                collapsed: false,
+            }
+        },
+        rootId
+    };
+};
+
+// 从 localStorage 加载数据
+const loadFromStorage = (): MindMapData | null => {
+    try {
+        const saved = localStorage.getItem(STORAGE_KEY);
+        if (saved) {
+            const data = JSON.parse(saved) as MindMapData;
+            // 验证数据完整性
+            if (data.rootId && data.nodes && data.nodes[data.rootId]) {
+                return data;
+            }
+        }
+    } catch (e) {
+        console.error('Failed to load mindmap data:', e);
+    }
+    return null;
+};
+
+// 保存到 localStorage
+const saveToStorage = (data: MindMapData) => {
+    try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    } catch (e) {
+        console.error('Failed to save mindmap data:', e);
+    }
 };
 
 const MindMapTool: React.FC = () => {
-    const [state, setState] = useState<MindMapState>(createInitialState);
+    const [data, setData] = useState<MindMapData>(() => loadFromStorage() || createInitialData());
     const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
     const [editingNodeId, setEditingNodeId] = useState<string | null>(null);
     const [editText, setEditText] = useState('');
@@ -54,7 +85,6 @@ const MindMapTool: React.FC = () => {
     const [offset, setOffset] = useState({ x: 0, y: 0 });
     const [isDragging, setIsDragging] = useState(false);
     const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
-    const [dragNodeId, setDragNodeId] = useState<string | null>(null);
     const [copySuccess, setCopySuccess] = useState(false);
 
     const canvasRef = useRef<HTMLDivElement>(null);
@@ -62,12 +92,12 @@ const MindMapTool: React.FC = () => {
     const inputRef = useRef<HTMLInputElement>(null);
 
     // 自动布局算法
-    const calculateLayout = useCallback((nodeId: string, nodes: Map<string, MindMapNode>, depth: number = 0, yOffset: number = 0): number => {
-        const node = nodes.get(nodeId);
+    const calculateLayout = useCallback((nodeId: string, nodes: Record<string, MindMapNode>, depth: number = 0, yOffset: number = 0): number => {
+        const node = nodes[nodeId];
         if (!node) return yOffset;
 
-        const horizontalSpacing = 180;
-        const verticalSpacing = 60;
+        const horizontalSpacing = 200;
+        const verticalSpacing = 70;
 
         node.x = depth * horizontalSpacing;
 
@@ -80,9 +110,8 @@ const MindMapTool: React.FC = () => {
         const childYPositions: number[] = [];
 
         for (const childId of node.children) {
-            const childStartY = currentY;
             currentY = calculateLayout(childId, nodes, depth + 1, currentY);
-            const childNode = nodes.get(childId);
+            const childNode = nodes[childId];
             if (childNode) {
                 childYPositions.push(childNode.y);
             }
@@ -100,29 +129,29 @@ const MindMapTool: React.FC = () => {
         return currentY;
     }, []);
 
-    // 应用布局
-    const applyLayout = useCallback(() => {
-        setState(prev => {
-            const newNodes = new Map(prev.nodes);
-            calculateLayout(prev.rootId, newNodes, 0, 0);
-            return { ...prev, nodes: newNodes };
-        });
+    // 应用布局并保存
+    const applyLayoutAndSave = useCallback((newData: MindMapData) => {
+        const nodes = { ...newData.nodes };
+        calculateLayout(newData.rootId, nodes, 0, 0);
+        const updatedData = { ...newData, nodes };
+        saveToStorage(updatedData);
+        return updatedData;
     }, [calculateLayout]);
 
     // 初始化时应用布局
     useEffect(() => {
-        applyLayout();
+        setData(prev => applyLayoutAndSave(prev));
     }, []);
 
     // 添加子节点
     const addChildNode = useCallback((parentId: string) => {
-        setState(prev => {
-            const parent = prev.nodes.get(parentId);
+        setData(prev => {
+            const parent = prev.nodes[parentId];
             if (!parent) return prev;
 
             const newId = generateId();
-            const colorIndex = (prev.nodes.size) % COLORS.length;
-            const newNodes = new Map(prev.nodes);
+            const nodeCount = Object.keys(prev.nodes).length;
+            const colorIndex = nodeCount % COLORS.length;
 
             const newNode: MindMapNode = {
                 id: newId,
@@ -135,75 +164,77 @@ const MindMapTool: React.FC = () => {
                 collapsed: false,
             };
 
-            newNodes.set(newId, newNode);
-            newNodes.set(parentId, {
-                ...parent,
-                children: [...parent.children, newId],
-                collapsed: false,
-            });
+            const updatedNodes = {
+                ...prev.nodes,
+                [newId]: newNode,
+                [parentId]: {
+                    ...parent,
+                    children: [...parent.children, newId],
+                    collapsed: false,
+                }
+            };
 
-            // 重新计算布局
-            calculateLayout(prev.rootId, newNodes, 0, 0);
-
-            return { ...prev, nodes: newNodes };
+            return applyLayoutAndSave({ ...prev, nodes: updatedNodes });
         });
-    }, [calculateLayout]);
+    }, [applyLayoutAndSave]);
 
     // 删除节点及其所有子节点
     const deleteNode = useCallback((nodeId: string) => {
-        setState(prev => {
-            const node = prev.nodes.get(nodeId);
-            if (!node || node.parentId === null) return prev; // 不能删除根节点
+        setData(prev => {
+            const node = prev.nodes[nodeId];
+            if (!node || node.parentId === null) return prev;
 
-            const newNodes = new Map(prev.nodes);
+            const newNodes = { ...prev.nodes };
 
             // 递归删除所有子节点
             const deleteRecursive = (id: string) => {
-                const n = newNodes.get(id);
+                const n = newNodes[id];
                 if (n) {
                     n.children.forEach(deleteRecursive);
-                    newNodes.delete(id);
+                    delete newNodes[id];
                 }
             };
             deleteRecursive(nodeId);
 
             // 从父节点中移除
-            const parent = newNodes.get(node.parentId);
+            const parent = newNodes[node.parentId];
             if (parent) {
-                newNodes.set(node.parentId, {
+                newNodes[node.parentId] = {
                     ...parent,
                     children: parent.children.filter(id => id !== nodeId),
-                });
+                };
             }
 
-            // 重新计算布局
-            calculateLayout(prev.rootId, newNodes, 0, 0);
-
-            return { ...prev, nodes: newNodes };
+            return applyLayoutAndSave({ ...prev, nodes: newNodes });
         });
         setSelectedNodeId(null);
-    }, [calculateLayout]);
+    }, [applyLayoutAndSave]);
 
     // 开始编辑节点
     const startEditing = useCallback((nodeId: string) => {
-        const node = state.nodes.get(nodeId);
+        const node = data.nodes[nodeId];
         if (node) {
             setEditingNodeId(nodeId);
             setEditText(node.text);
             setTimeout(() => inputRef.current?.focus(), 0);
         }
-    }, [state.nodes]);
+    }, [data.nodes]);
 
     // 完成编辑
     const finishEditing = useCallback(() => {
         if (editingNodeId && editText.trim()) {
-            setState(prev => {
-                const newNodes = new Map(prev.nodes);
-                const node = newNodes.get(editingNodeId);
+            setData(prev => {
+                const node = prev.nodes[editingNodeId];
                 if (node) {
-                    newNodes.set(editingNodeId, { ...node, text: editText.trim() });
+                    const newNodes = {
+                        ...prev.nodes,
+                        [editingNodeId]: { ...node, text: editText.trim() }
+                    };
+                    const newData = { ...prev, nodes: newNodes };
+                    saveToStorage(newData);
+                    return newData;
                 }
-                return { ...prev, nodes: newNodes };
+                return prev;
             });
         }
         setEditingNodeId(null);
@@ -212,16 +243,18 @@ const MindMapTool: React.FC = () => {
 
     // 切换折叠状态
     const toggleCollapse = useCallback((nodeId: string) => {
-        setState(prev => {
-            const newNodes = new Map(prev.nodes);
-            const node = newNodes.get(nodeId);
+        setData(prev => {
+            const node = prev.nodes[nodeId];
             if (node && node.children.length > 0) {
-                newNodes.set(nodeId, { ...node, collapsed: !node.collapsed });
-                calculateLayout(prev.rootId, newNodes, 0, 0);
+                const newNodes = {
+                    ...prev.nodes,
+                    [nodeId]: { ...node, collapsed: !node.collapsed }
+                };
+                return applyLayoutAndSave({ ...prev, nodes: newNodes });
             }
-            return { ...prev, nodes: newNodes };
+            return prev;
         });
-    }, [calculateLayout]);
+    }, [applyLayoutAndSave]);
 
     // 鼠标滚轮缩放
     const handleWheel = useCallback((e: React.WheelEvent) => {
@@ -241,67 +274,189 @@ const MindMapTool: React.FC = () => {
 
     // 拖拽画布
     const handleMouseMove = useCallback((e: React.MouseEvent) => {
-        if (isDragging && !dragNodeId) {
+        if (isDragging) {
             setOffset({
                 x: e.clientX - dragStart.x,
                 y: e.clientY - dragStart.y,
             });
         }
-    }, [isDragging, dragStart, dragNodeId]);
+    }, [isDragging, dragStart]);
 
     // 结束拖拽
     const handleMouseUp = useCallback(() => {
         setIsDragging(false);
-        setDragNodeId(null);
     }, []);
 
-    // 导出为PNG
-    const exportToPNG = useCallback(async () => {
-        if (!svgRef.current) return;
-
-        const svg = svgRef.current;
-        const nodes = Array.from(state.nodes.values());
-
-        // 计算边界
+    // 计算所有可见节点的边界
+    const calculateBounds = useCallback(() => {
+        const nodes = Object.values(data.nodes);
         let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-        nodes.forEach(node => {
+
+        const collectVisibleNodes = (nodeId: string) => {
+            const node = data.nodes[nodeId];
+            if (!node) return;
+
             minX = Math.min(minX, node.x - 80);
-            minY = Math.min(minY, node.y - 25);
-            maxX = Math.max(maxX, node.x + 80);
-            maxY = Math.max(maxY, node.y + 25);
-        });
+            minY = Math.min(minY, node.y - 30);
+            maxX = Math.max(maxX, node.x + 100);
+            maxY = Math.max(maxY, node.y + 30);
 
-        const padding = 40;
-        const width = maxX - minX + padding * 2;
-        const height = maxY - minY + padding * 2;
+            if (!node.collapsed) {
+                node.children.forEach(collectVisibleNodes);
+            }
+        };
 
-        // 创建临时 SVG
-        const tempSvg = svg.cloneNode(true) as SVGSVGElement;
-        tempSvg.setAttribute('width', String(width));
-        tempSvg.setAttribute('height', String(height));
-        tempSvg.setAttribute('viewBox', `${minX - padding} ${minY - padding} ${width} ${height}`);
+        collectVisibleNodes(data.rootId);
 
-        // 添加白色背景
+        if (minX === Infinity) {
+            return { minX: -100, minY: -50, maxX: 100, maxY: 50 };
+        }
+
+        return { minX, minY, maxX, maxY };
+    }, [data]);
+
+    // 导出为PNG - 重新生成干净的SVG
+    const exportToPNG = useCallback(async () => {
+        // 先结束编辑状态
+        if (editingNodeId) {
+            finishEditing();
+        }
+
+        const bounds = calculateBounds();
+        const padding = 50;
+        const width = bounds.maxX - bounds.minX + padding * 2;
+        const height = bounds.maxY - bounds.minY + padding * 2;
+
+        // 创建新的 SVG 元素
+        const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+        svg.setAttribute('width', String(width));
+        svg.setAttribute('height', String(height));
+        svg.setAttribute('viewBox', `${bounds.minX - padding} ${bounds.minY - padding} ${width} ${height}`);
+        svg.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+
+        // 白色背景
         const bg = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-        bg.setAttribute('x', String(minX - padding));
-        bg.setAttribute('y', String(minY - padding));
+        bg.setAttribute('x', String(bounds.minX - padding));
+        bg.setAttribute('y', String(bounds.minY - padding));
         bg.setAttribute('width', String(width));
         bg.setAttribute('height', String(height));
         bg.setAttribute('fill', 'white');
-        tempSvg.insertBefore(bg, tempSvg.firstChild);
+        svg.appendChild(bg);
 
-        const svgData = new XMLSerializer().serializeToString(tempSvg);
+        // 绘制连接线
+        const drawConnections = (nodeId: string) => {
+            const node = data.nodes[nodeId];
+            if (!node || node.collapsed) return;
+
+            node.children.forEach(childId => {
+                const child = data.nodes[childId];
+                if (child) {
+                    const startX = node.x + 70;
+                    const startY = node.y;
+                    const endX = child.x - 70;
+                    const endY = child.y;
+                    const midX = (startX + endX) / 2;
+
+                    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                    path.setAttribute('d', `M ${startX} ${startY} C ${midX} ${startY}, ${midX} ${endY}, ${endX} ${endY}`);
+                    path.setAttribute('fill', 'none');
+                    path.setAttribute('stroke', child.color);
+                    path.setAttribute('stroke-width', '2');
+                    path.setAttribute('opacity', '0.6');
+                    svg.appendChild(path);
+
+                    drawConnections(childId);
+                }
+            });
+        };
+        drawConnections(data.rootId);
+
+        // 绘制节点
+        const drawNodes = (nodeId: string) => {
+            const node = data.nodes[nodeId];
+            if (!node) return;
+
+            const isRoot = node.parentId === null;
+            const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+            g.setAttribute('transform', `translate(${node.x}, ${node.y})`);
+
+            // 节点背景
+            const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+            rect.setAttribute('x', '-70');
+            rect.setAttribute('y', '-22');
+            rect.setAttribute('width', '140');
+            rect.setAttribute('height', '44');
+            rect.setAttribute('rx', '22');
+            rect.setAttribute('fill', isRoot ? node.color : 'white');
+            rect.setAttribute('stroke', node.color);
+            rect.setAttribute('stroke-width', '2');
+            g.appendChild(rect);
+
+            // 节点文本
+            const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+            text.setAttribute('x', '0');
+            text.setAttribute('y', '5');
+            text.setAttribute('text-anchor', 'middle');
+            text.setAttribute('fill', isRoot ? 'white' : node.color);
+            text.setAttribute('font-size', '14');
+            text.setAttribute('font-weight', isRoot ? 'bold' : 'normal');
+            text.setAttribute('font-family', 'system-ui, -apple-system, sans-serif');
+            const displayText = node.text.length > 10 ? node.text.slice(0, 10) + '...' : node.text;
+            text.textContent = displayText;
+            g.appendChild(text);
+
+            // 折叠指示器
+            if (node.collapsed && node.children.length > 0) {
+                const indicator = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+                indicator.setAttribute('cx', '75');
+                indicator.setAttribute('cy', '0');
+                indicator.setAttribute('r', '10');
+                indicator.setAttribute('fill', node.color);
+                indicator.setAttribute('opacity', '0.8');
+                g.appendChild(indicator);
+
+                const plus = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                plus.setAttribute('x', '75');
+                plus.setAttribute('y', '4');
+                plus.setAttribute('text-anchor', 'middle');
+                plus.setAttribute('fill', 'white');
+                plus.setAttribute('font-size', '14');
+                plus.setAttribute('font-weight', 'bold');
+                plus.textContent = '+';
+                g.appendChild(plus);
+
+                const count = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                count.setAttribute('x', '95');
+                count.setAttribute('y', '5');
+                count.setAttribute('font-size', '12');
+                count.setAttribute('fill', '#999');
+                count.textContent = `(${node.children.length})`;
+                g.appendChild(count);
+            }
+
+            svg.appendChild(g);
+
+            // 递归绘制子节点
+            if (!node.collapsed) {
+                node.children.forEach(drawNodes);
+            }
+        };
+        drawNodes(data.rootId);
+
+        // 转换为图片
+        const svgData = new XMLSerializer().serializeToString(svg);
         const svgBlob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' });
         const svgUrl = URL.createObjectURL(svgBlob);
 
         const img = new Image();
         img.onload = () => {
             const canvas = document.createElement('canvas');
-            canvas.width = width * 2; // 2x for better quality
-            canvas.height = height * 2;
+            const scale = 2; // 2x for better quality
+            canvas.width = width * scale;
+            canvas.height = height * scale;
             const ctx = canvas.getContext('2d');
             if (ctx) {
-                ctx.scale(2, 2);
+                ctx.scale(scale, scale);
                 ctx.drawImage(img, 0, 0);
                 canvas.toBlob(blob => {
                     if (blob) {
@@ -320,7 +475,7 @@ const MindMapTool: React.FC = () => {
 
         setCopySuccess(true);
         setTimeout(() => setCopySuccess(false), 2000);
-    }, [state.nodes]);
+    }, [data, editingNodeId, finishEditing, calculateBounds]);
 
     // 重置画布位置
     const resetView = useCallback(() => {
@@ -330,21 +485,24 @@ const MindMapTool: React.FC = () => {
 
     // 清空并重新开始
     const resetMindMap = useCallback(() => {
-        setState(createInitialState());
+        const newData = createInitialData();
+        setData(applyLayoutAndSave(newData));
         setSelectedNodeId(null);
         setEditingNodeId(null);
         setScale(1);
         setOffset({ x: 0, y: 0 });
-        setTimeout(applyLayout, 0);
-    }, [applyLayout]);
+    }, [applyLayoutAndSave]);
 
     // 渲染连接线
     const renderConnections = () => {
         const lines: JSX.Element[] = [];
-        state.nodes.forEach((node, nodeId) => {
-            if (node.collapsed) return;
+
+        const drawConnections = (nodeId: string) => {
+            const node = data.nodes[nodeId];
+            if (!node || node.collapsed) return;
+
             node.children.forEach(childId => {
-                const child = state.nodes.get(childId);
+                const child = data.nodes[childId];
                 if (child) {
                     const startX = node.x + 70;
                     const startY = node.y;
@@ -362,9 +520,13 @@ const MindMapTool: React.FC = () => {
                             opacity="0.6"
                         />
                     );
+
+                    drawConnections(childId);
                 }
             });
-        });
+        };
+
+        drawConnections(data.rootId);
         return lines;
     };
 
@@ -372,129 +534,120 @@ const MindMapTool: React.FC = () => {
     const renderNodes = () => {
         const nodeElements: JSX.Element[] = [];
 
-        const renderNode = (nodeId: string, visible: boolean = true) => {
-            const node = state.nodes.get(nodeId);
+        const renderNode = (nodeId: string) => {
+            const node = data.nodes[nodeId];
             if (!node) return;
 
-            if (visible) {
-                const isSelected = selectedNodeId === nodeId;
-                const isEditing = editingNodeId === nodeId;
-                const isRoot = node.parentId === null;
-                const hasChildren = node.children.length > 0;
+            const isSelected = selectedNodeId === nodeId;
+            const isEditing = editingNodeId === nodeId;
+            const isRoot = node.parentId === null;
+            const hasChildren = node.children.length > 0;
 
-                nodeElements.push(
-                    <g key={nodeId} transform={`translate(${node.x}, ${node.y})`}>
-                        {/* 节点背景 */}
-                        <rect
-                            x="-70"
-                            y="-22"
-                            width="140"
-                            height="44"
-                            rx="22"
-                            fill={isRoot ? node.color : 'white'}
-                            stroke={node.color}
-                            strokeWidth={isSelected ? 3 : 2}
-                            className="cursor-pointer transition-all"
-                            onClick={() => setSelectedNodeId(nodeId)}
-                            onDoubleClick={() => startEditing(nodeId)}
-                        />
+            nodeElements.push(
+                <g key={nodeId} transform={`translate(${node.x}, ${node.y})`}>
+                    {/* 节点背景 */}
+                    <rect
+                        x="-70"
+                        y="-22"
+                        width="140"
+                        height="44"
+                        rx="22"
+                        fill={isRoot ? node.color : 'white'}
+                        stroke={node.color}
+                        strokeWidth={isSelected ? 3 : 2}
+                        className="cursor-pointer transition-all"
+                        onClick={() => setSelectedNodeId(nodeId)}
+                        onDoubleClick={() => startEditing(nodeId)}
+                    />
 
-                        {/* 节点文本或输入框 */}
-                        {isEditing ? (
-                            <foreignObject x="-65" y="-15" width="130" height="30">
-                                <input
-                                    ref={inputRef}
-                                    type="text"
-                                    value={editText}
-                                    onChange={e => setEditText(e.target.value)}
-                                    onBlur={finishEditing}
-                                    onKeyDown={e => {
-                                        if (e.key === 'Enter') finishEditing();
-                                        if (e.key === 'Escape') {
-                                            setEditingNodeId(null);
-                                            setEditText('');
-                                        }
-                                    }}
-                                    className="w-full h-full text-center text-sm bg-transparent outline-none border-none"
-                                    style={{ color: isRoot ? 'white' : node.color }}
-                                />
-                            </foreignObject>
-                        ) : (
+                    {/* 节点文本或输入框 */}
+                    {isEditing ? (
+                        <foreignObject x="-65" y="-15" width="130" height="30">
+                            <input
+                                ref={inputRef}
+                                type="text"
+                                value={editText}
+                                onChange={e => setEditText(e.target.value)}
+                                onBlur={finishEditing}
+                                onKeyDown={e => {
+                                    if (e.key === 'Enter') finishEditing();
+                                    if (e.key === 'Escape') {
+                                        setEditingNodeId(null);
+                                        setEditText('');
+                                    }
+                                }}
+                                className="w-full h-full text-center text-sm bg-transparent outline-none border-none"
+                                style={{ color: isRoot ? 'white' : node.color }}
+                            />
+                        </foreignObject>
+                    ) : (
+                        <text
+                            x="0"
+                            y="5"
+                            textAnchor="middle"
+                            fill={isRoot ? 'white' : node.color}
+                            fontSize="14"
+                            fontWeight={isRoot ? 'bold' : 'normal'}
+                            className="pointer-events-none select-none"
+                        >
+                            {node.text.length > 10 ? node.text.slice(0, 10) + '...' : node.text}
+                        </text>
+                    )}
+
+                    {/* 折叠/展开按钮 */}
+                    {hasChildren && (
+                        <g
+                            transform="translate(75, 0)"
+                            className="cursor-pointer"
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                toggleCollapse(nodeId);
+                            }}
+                        >
+                            <circle r="10" fill={node.color} opacity="0.8" />
                             <text
                                 x="0"
-                                y="5"
+                                y="4"
                                 textAnchor="middle"
-                                fill={isRoot ? 'white' : node.color}
+                                fill="white"
                                 fontSize="14"
-                                fontWeight={isRoot ? 'bold' : 'normal'}
-                                className="pointer-events-none select-none"
+                                fontWeight="bold"
                             >
-                                {node.text.length > 10 ? node.text.slice(0, 10) + '...' : node.text}
+                                {node.collapsed ? '+' : '-'}
                             </text>
-                        )}
+                        </g>
+                    )}
 
-                        {/* 折叠/展开按钮 */}
-                        {hasChildren && (
-                            <g
-                                transform="translate(75, 0)"
-                                className="cursor-pointer"
-                                onClick={(e) => {
-                                    e.stopPropagation();
-                                    toggleCollapse(nodeId);
-                                }}
-                            >
-                                <circle r="10" fill={node.color} opacity="0.8" />
-                                <text
-                                    x="0"
-                                    y="4"
-                                    textAnchor="middle"
-                                    fill="white"
-                                    fontSize="14"
-                                    fontWeight="bold"
-                                >
-                                    {node.collapsed ? '+' : '-'}
-                                </text>
-                            </g>
-                        )}
-
-                        {/* 折叠时显示子节点数量 */}
-                        {node.collapsed && hasChildren && (
-                            <text
-                                x="95"
-                                y="5"
-                                fontSize="12"
-                                fill="#999"
-                            >
-                                ({node.children.length})
-                            </text>
-                        )}
-                    </g>
-                );
-            }
+                    {/* 折叠时显示子节点数量 */}
+                    {node.collapsed && hasChildren && (
+                        <text
+                            x="95"
+                            y="5"
+                            fontSize="12"
+                            fill="#999"
+                        >
+                            ({node.children.length})
+                        </text>
+                    )}
+                </g>
+            );
 
             // 递归渲染子节点
             if (!node.collapsed) {
-                node.children.forEach(childId => renderNode(childId, visible));
+                node.children.forEach(renderNode);
             }
         };
 
-        renderNode(state.rootId);
+        renderNode(data.rootId);
         return nodeElements;
     };
 
     // 计算 SVG 视图
-    const nodes = Array.from(state.nodes.values());
-    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-    nodes.forEach(node => {
-        minX = Math.min(minX, node.x - 100);
-        minY = Math.min(minY, node.y - 40);
-        maxX = Math.max(maxX, node.x + 120);
-        maxY = Math.max(maxY, node.y + 40);
-    });
-    const viewWidth = Math.max(800, maxX - minX + 200);
-    const viewHeight = Math.max(600, maxY - minY + 200);
-    const centerX = (minX + maxX) / 2;
-    const centerY = (minY + maxY) / 2;
+    const bounds = calculateBounds();
+    const viewWidth = Math.max(800, bounds.maxX - bounds.minX + 200);
+    const viewHeight = Math.max(600, bounds.maxY - bounds.minY + 200);
+    const centerX = (bounds.minX + bounds.maxX) / 2;
+    const centerY = (bounds.minY + bounds.maxY) / 2;
 
     return (
         <div className="flex w-full flex-col items-center px-4 py-6 sm:px-6 lg:px-8">
@@ -530,7 +683,7 @@ const MindMapTool: React.FC = () => {
                     </button>
                     <button
                         onClick={() => selectedNodeId && deleteNode(selectedNodeId)}
-                        disabled={!selectedNodeId || state.nodes.get(selectedNodeId)?.parentId === null}
+                        disabled={!selectedNodeId || data.nodes[selectedNodeId]?.parentId === null}
                         className="flex items-center gap-1 px-3 py-1.5 bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 rounded text-sm hover:bg-red-200 dark:hover:bg-red-900/50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                         <span className="material-symbols-outlined text-base">delete</span>
@@ -603,7 +756,7 @@ const MindMapTool: React.FC = () => {
                 >
                     {/* 网格背景 */}
                     <div
-                        className="absolute inset-0 opacity-30"
+                        className="absolute inset-0 opacity-30 dark:opacity-10"
                         style={{
                             backgroundImage: `
                                 linear-gradient(to right, #e5e7eb 1px, transparent 1px),
@@ -638,23 +791,13 @@ const MindMapTool: React.FC = () => {
                         <div className="absolute top-4 right-4 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 p-3 text-sm">
                             <p className="text-gray-500 dark:text-gray-400 mb-1">选中节点:</p>
                             <p className="font-medium text-gray-900 dark:text-white">
-                                {state.nodes.get(selectedNodeId)?.text}
+                                {data.nodes[selectedNodeId]?.text}
                             </p>
                         </div>
                     )}
                 </div>
 
-                {/* 使用说明 */}
-                <div className="mt-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4 text-sm text-blue-700 dark:text-blue-300">
-                    <p className="font-medium mb-2">使用说明:</p>
-                    <ul className="list-disc list-inside space-y-1 text-blue-600 dark:text-blue-400">
-                        <li>点击节点选中，再点击「添加子节点」创建分支</li>
-                        <li>双击节点可直接编辑文字，按 Enter 确认或 Esc 取消</li>
-                        <li>点击节点右侧的 +/- 按钮可以折叠/展开子节点</li>
-                        <li>使用鼠标滚轮缩放，拖拽空白区域移动画布</li>
-                        <li>完成后点击「导出 PNG」保存思维导图</li>
-                    </ul>
-                </div>
+                    
             </div>
         </div>
     );
