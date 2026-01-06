@@ -19,6 +19,23 @@ const JsonFormatterTool: React.FC = () => {
 
     const formatTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
+    // 尝试修复非标准 JSON 格式
+    const tryFixJson = (text: string): string => {
+        let fixed = text;
+
+        // 1. 移除尾随逗号 (对象和数组中)
+        fixed = fixed.replace(/,(\s*[}\]])/g, '$1');
+
+        // 2. 将单引号替换为双引号 (键和值都处理)
+        fixed = fixed.replace(/'/g, '"');
+
+        // 3. 给没有引号的键名加上双引号
+        // 匹配 { 或 , 后面跟着的无引号键名（包括数字开头的键名）
+        fixed = fixed.replace(/([{,]\s*)([a-zA-Z_$][\w$]*|[\d][\w$]*)(\s*:)/g, '$1"$2"$3');
+
+        return fixed;
+    };
+
     // 自动格式化函数
     const performFormat = useCallback((text: string) => {
         if (!text.trim()) {
@@ -28,15 +45,24 @@ const JsonFormatterTool: React.FC = () => {
         }
 
         try {
-            // 解析 JSON
+            // 首先尝试直接解析
             const parsed = JSON.parse(text);
             setParsedJson(parsed);
             setError(null);
             // 默认展开第一层
             setExpandedPaths(new Set(['root']));
-        } catch (err) {
-            setError(err instanceof Error ? err.message : 'JSON 格式错误');
-            setParsedJson(null);
+        } catch {
+            // 解析失败，尝试修复后再解析
+            try {
+                const fixedText = tryFixJson(text);
+                const parsed = JSON.parse(fixedText);
+                setParsedJson(parsed);
+                setError(null);
+                setExpandedPaths(new Set(['root']));
+            } catch (err) {
+                setError(err instanceof Error ? err.message : 'JSON 格式错误');
+                setParsedJson(null);
+            }
         }
     }, []);
 
