@@ -25,17 +25,19 @@ Font.register({
     ],
 });
 
-Font.registerHyphenationCallback(word => ['', word, '']);
-
 // A4 尺寸（pt）
 const A4_WIDTH_PT = 595;
 const A4_HEIGHT_PT = 842;
 
-const wrapLongText = (text: string, maxChars: number = 30): string => {
-    if (!text) return '';
-    return text.split('').reduce((acc, char, index) => {
-        return acc + char + (index > 0 && (index + 1) % maxChars === 0 ? '\u200B' : '');
-    }, '');
+const WrapText: React.FC<{ children: string; style?: any }> = ({ children, style }) => {
+    if (!children) return null;
+    return (
+        <Text style={style}>
+            {children.split('').map((char, i) => (
+                <Text key={i}>{char}</Text>
+            ))}
+        </Text>
+    );
 };
 
 // 简历数据类型
@@ -399,31 +401,31 @@ const ResumePDFDocument: React.FC<ResumePDFProps> = ({ resumeData, themeColor, f
             <Page size="A4" style={styles.page}>
                 {/* 头部信息 */}
                 <View style={styles.header}>
-                    <Text style={styles.name}>{personal.name || '您的姓名'}</Text>
-                    {personal.title && <Text style={styles.title}>{personal.title}</Text>}
+                    <WrapText style={styles.name}>{personal.name || '您的姓名'}</WrapText>
+                    {personal.title && <WrapText style={styles.title}>{personal.title}</WrapText>}
                     <View style={styles.contactRow}>
                         {personal.phone && (
                             <View style={styles.contactItem}>
                                 <PdfPhoneIcon />
-                                <Text>{personal.phone}</Text>
+                                <WrapText>{personal.phone}</WrapText>
                             </View>
                         )}
                         {personal.email && (
                             <View style={styles.contactItem}>
                                 <PdfEmailIcon />
-                                <Text>{personal.email}</Text>
+                                <WrapText>{personal.email}</WrapText>
                             </View>
                         )}
                         {personal.location && (
                             <View style={styles.contactItem}>
                                 <PdfLocationIcon />
-                                <Text>{personal.location}</Text>
+                                <WrapText>{personal.location}</WrapText>
                             </View>
                         )}
                         {personal.website && (
                             <View style={styles.contactItem}>
                                 <PdfWebsiteIcon />
-                                <Text>{personal.website}</Text>
+                                <WrapText>{personal.website}</WrapText>
                             </View>
                         )}
                     </View>
@@ -436,18 +438,18 @@ const ResumePDFDocument: React.FC<ResumePDFProps> = ({ resumeData, themeColor, f
                         {education.map((edu) => (
                             <View key={edu.id} style={styles.entryContainer}>
                                 <View style={styles.entryHeader}>
-                                    <Text style={styles.entryTitle}>{edu.school}</Text>
+                                    <WrapText style={styles.entryTitle}>{edu.school}</WrapText>
                                     <Text style={styles.entryDate}>{edu.startDate} - {edu.endDate}</Text>
                                 </View>
-                                <Text style={styles.entrySubtitle}>
+                                <WrapText style={styles.entrySubtitle}>
                                     {[edu.degree, edu.major, edu.gpa].filter(Boolean).join(' | ')}
-                                </Text>
+                                </WrapText>
                                 {edu.descriptions.filter(d => d.trim()).length > 0 && (
                                     <View style={styles.bulletList}>
                                         {edu.descriptions.filter(d => d.trim()).map((desc, i) => (
                                             <View key={i} style={styles.bulletItem}>
                                                 <Text style={styles.bullet}>•</Text>
-                                                <Text style={styles.bulletText}>{desc}</Text>
+                                                <WrapText style={styles.bulletText}>{desc}</WrapText>
                                             </View>
                                         ))}
                                     </View>
@@ -464,18 +466,18 @@ const ResumePDFDocument: React.FC<ResumePDFProps> = ({ resumeData, themeColor, f
                         {experience.map((exp) => (
                             <View key={exp.id} style={styles.entryContainer}>
                                 <View style={styles.entryHeader}>
-                                    <Text style={styles.entryTitle}>{exp.company}</Text>
+                                    <WrapText style={styles.entryTitle}>{exp.company}</WrapText>
                                     <Text style={styles.entryDate}>{exp.startDate} - {exp.endDate}</Text>
                                 </View>
-                                <Text style={styles.entrySubtitle}>
+                                <WrapText style={styles.entrySubtitle}>
                                     {[exp.position, exp.location].filter(Boolean).join(' | ')}
-                                </Text>
+                                </WrapText>
                                 {exp.descriptions.filter(d => d.trim()).length > 0 && (
                                     <View style={styles.bulletList}>
                                         {exp.descriptions.filter(d => d.trim()).map((desc, i) => (
                                             <View key={i} style={styles.bulletItem}>
                                                 <Text style={styles.bullet}>•</Text>
-                                                <Text style={styles.bulletText}>{desc}</Text>
+                                                <WrapText style={styles.bulletText}>{desc}</WrapText>
                                             </View>
                                         ))}
                                     </View>
@@ -492,7 +494,7 @@ const ResumePDFDocument: React.FC<ResumePDFProps> = ({ resumeData, themeColor, f
                         {projects.map((proj) => (
                             <View key={proj.id} style={styles.entryContainer}>
                                 <View style={styles.entryHeader}>
-                                    <Text style={styles.entryTitle}>{proj.name}</Text>
+                                    <WrapText style={styles.entryTitle}>{proj.name}</WrapText>
                                     <Text style={styles.entryDate}>{proj.date}</Text>
                                 </View>
                                 {proj.descriptions.filter(d => d.trim()).length > 0 && (
@@ -500,7 +502,7 @@ const ResumePDFDocument: React.FC<ResumePDFProps> = ({ resumeData, themeColor, f
                                         {proj.descriptions.filter(d => d.trim()).map((desc, i) => (
                                             <View key={i} style={styles.bulletItem}>
                                                 <Text style={styles.bullet}>•</Text>
-                                                <Text style={styles.bulletText}>{desc}</Text>
+                                                <WrapText style={styles.bulletText}>{desc}</WrapText>
                                             </View>
                                         ))}
                                     </View>
@@ -517,7 +519,7 @@ const ResumePDFDocument: React.FC<ResumePDFProps> = ({ resumeData, themeColor, f
                         {skills.map((skill, idx) => (
                             <View key={idx} style={styles.skillRow}>
                                 <Text style={styles.skillCategory}>{skill.category}：</Text>
-                                <Text style={styles.skillItems}>{skill.items}</Text>
+                                <WrapText style={styles.skillItems}>{skill.items}</WrapText>
                             </View>
                         ))}
                     </View>
