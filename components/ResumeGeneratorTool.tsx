@@ -11,27 +11,33 @@ import {
     Path,
 } from '@react-pdf/renderer';
 
-// 注册中文字体 - 使用 Noto Sans SC
+// 注册中文字体 - 使用本地 Noto Sans SC
 Font.register({
     family: 'NotoSansSC',
     fonts: [
         {
-            src: 'https://fonts.gstatic.com/s/notosanssc/v39/k3kCo84MPvpLmixcA63oeAL7Iqp5IZJF9bmaG9_FnYw.ttf',
+            src: './fonts/NotoSansSC-Regular.ttf',
             fontWeight: 'normal'
         },
         {
-            src: 'https://fonts.gstatic.com/s/notosanssc/v39/k3kCo84MPvpLmixcA63oeAL7Iqp5IZJF9bmaGzjCnYw.ttf',
+            src: './fonts/NotoSansSC-Bold.ttf',
             fontWeight: 'bold'
         },
     ],
 });
 
-// 禁用连字符断词
-Font.registerHyphenationCallback(word => [word]);
+Font.registerHyphenationCallback(word => ['', word, '']);
 
 // A4 尺寸（pt）
 const A4_WIDTH_PT = 595;
 const A4_HEIGHT_PT = 842;
+
+const wrapLongText = (text: string, maxChars: number = 30): string => {
+    if (!text) return '';
+    return text.split('').reduce((acc, char, index) => {
+        return acc + char + (index > 0 && (index + 1) % maxChars === 0 ? '\u200B' : '');
+    }, '');
+};
 
 // 简历数据类型
 interface PersonalInfo {
@@ -237,6 +243,7 @@ const createPdfStyles = (themeColor: string, fontSize: number) => StyleSheet.cre
     header: {
         textAlign: 'center',
         marginBottom: 8,
+        display: 'flex',
     },
     name: {
         fontSize: fontSize + 10,
@@ -244,12 +251,14 @@ const createPdfStyles = (themeColor: string, fontSize: number) => StyleSheet.cre
         color: '#1a1a1a',
         marginBottom: 1,
         wordBreak: 'break-all',
+        maxWidth: '100%',
     },
     title: {
         fontSize: fontSize,
         color: '#666666',
         marginBottom: 4,
         wordBreak: 'break-all',
+        maxWidth: '100%',
     },
     contactRow: {
         flexDirection: 'row',
@@ -257,6 +266,7 @@ const createPdfStyles = (themeColor: string, fontSize: number) => StyleSheet.cre
         flexWrap: 'wrap',
         gap: 8,
         marginBottom: 2,
+        display: 'flex',
     },
     contactItem: {
         flexDirection: 'row',
@@ -265,6 +275,7 @@ const createPdfStyles = (themeColor: string, fontSize: number) => StyleSheet.cre
         fontSize: fontSize - 1,
         color: '#555555',
         wordBreak: 'break-all',
+        flexWrap: 'wrap',
     },
     section: {
         marginBottom: 6,
@@ -282,18 +293,22 @@ const createPdfStyles = (themeColor: string, fontSize: number) => StyleSheet.cre
     },
     entryContainer: {
         marginBottom: 4,
+        display: 'flex',
     },
     entryHeader: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'baseline',
         marginBottom: 0,
+        display: 'flex',
+        flexWrap: 'wrap',
     },
     entryTitle: {
         fontSize: fontSize - 1,
         fontWeight: 'bold',
         color: '#1a1a1a',
         wordBreak: 'break-all',
+        flex: 1,
     },
     entryDate: {
         fontSize: fontSize - 2,
@@ -304,6 +319,7 @@ const createPdfStyles = (themeColor: string, fontSize: number) => StyleSheet.cre
         color: '#666666',
         marginBottom: 1,
         wordBreak: 'break-all',
+        flex: 1,
     },
     bulletList: {
         paddingLeft: 8,
@@ -311,6 +327,7 @@ const createPdfStyles = (themeColor: string, fontSize: number) => StyleSheet.cre
     bulletItem: {
         flexDirection: 'row',
         marginBottom: 0,
+        display: 'flex',
     },
     bullet: {
         width: 10,
@@ -319,6 +336,7 @@ const createPdfStyles = (themeColor: string, fontSize: number) => StyleSheet.cre
     },
     bulletText: {
         flex: 1,
+        width: '100%',
         fontSize: fontSize - 1,
         color: '#444444',
         lineHeight: 1.2,
