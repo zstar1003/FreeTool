@@ -1,4 +1,5 @@
 import React from 'react';
+import ThemeToggle from './ThemeToggle';
 
 type ToolType =
     | 'translate'
@@ -112,12 +113,13 @@ interface BottomNavBarProps {
 const BottomNavBar: React.FC<BottomNavBarProps> = ({ activeTool, setActiveTool }) => {
     return (
         <div className="md:hidden fixed bottom-0 left-0 right-0 bg-gray-100 dark:bg-gray-800 border-t border-border-light dark:border-border-dark z-10">
-            <div className="flex justify-around">
+            <div className="flex justify-around items-center h-16">
+                <ThemeToggle />
                 {TOOLS.map(tool => (
                     <button
                         key={tool.id}
                         onClick={() => setActiveTool(tool.id)}
-                        className={`flex flex-col items-center justify-center w-full h-16 transition-all duration-200 ${
+                        className={`flex flex-col items-center justify-center transition-all duration-200 ${
                             activeTool === tool.id
                                 ? 'text-gray-900 dark:text-gray-100'
                                 : 'text-gray-500 dark:text-gray-400'
