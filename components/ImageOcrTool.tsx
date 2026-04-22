@@ -3,8 +3,8 @@ import type { InitializationSummary, OcrResult, PaddleOCRCreateOptions } from '@
 
 type OcrLanguage = 'ch' | 'chinese_cht' | 'en' | 'japan';
 type ToolStatus = 'idle' | 'initializing' | 'ready' | 'processing';
-type PreviewMode = 'original' | 'annotated';
 type UploadSource = 'upload' | 'replace' | 'drop' | 'paste';
+type ExpandedPanel = 'image' | 'text' | null;
 type OcrRuntime = typeof import('@paddleocr/paddleocr-js');
 type OcrVizRuntime = typeof import('@paddleocr/paddleocr-js/viz');
 type OcrEngine = Awaited<ReturnType<OcrRuntime['PaddleOCR']['create']>>;
@@ -54,11 +54,6 @@ const formatBytes = (bytes: number) => {
     return `${value >= 100 ? Math.round(value) : value.toFixed(value >= 10 ? 1 : 2)} ${units[index]}`;
 };
 
-const formatProviderLabel = (value?: string) => {
-    if (!value) return '未初始化';
-    return value.replace(/_/g, ' ').toUpperCase();
-};
-
 const inferModelLabel = (url: string) => {
     if (url.includes('_det')) return '检测模型';
     if (url.includes('_rec')) return '识别模型';
@@ -81,6 +76,16 @@ const buildPastedImageFile = (file: File) => {
             lastModified: Date.now(),
         }
     );
+};
+
+const formatOcrText = (text: string) => {
+    if (!text.trim()) return '';
+
+    return text
+        .replace(/[\r\n]+/g, '')
+        .replace(/\t+/g, '')
+        .replace(/\s+/g, ' ')
+        .trim();
 };
 
 const formatErrorMessage = (error: unknown) => {
@@ -162,15 +167,16 @@ const ImageOcrTool: React.FC = () => {
     const [statusMessage, setStatusMessage] = useState<string>(INITIAL_STATUS_MESSAGE);
     const [error, setError] = useState<string | null>(null);
     const [copied, setCopied] = useState<boolean>(false);
-    const [previewMode, setPreviewMode] = useState<PreviewMode>('original');
     const [initSummary, setInitSummary] = useState<InitializationSummary | null>(null);
-    const [engineMode, setEngineMode] = useState<'worker' | 'main-thread' | null>(null);
     const [downloadTasks, setDownloadTasks] = useState<ModelDownloadTask[]>([]);
     const [isDragActive, setIsDragActive] = useState<boolean>(false);
+    const [isFormattedResult, setIsFormattedResult] = useState<boolean>(false);
+    const [expandedPanel, setExpandedPanel] = useState<ExpandedPanel>(null);
+    const [resultText, setResultText] = useState<string>('');
+    const [restoreResultText, setRestoreResultText] = useState<string>('');
 
     const uploadInputRef = useRef<HTMLInputElement>(null);
     const replaceInputRef = useRef<HTMLInputElement>(null);
-    const resultTextareaRef = useRef<HTMLTextAreaElement>(null);
     const ocrRef = useRef<OcrEngine | null>(null);
     const ocrRuntimeRef = useRef<OcrRuntime | null>(null);
     const ocrVizRuntimeRef = useRef<OcrVizRuntime | null>(null);
@@ -183,18 +189,13 @@ const ImageOcrTool: React.FC = () => {
     );
 
     const textCharacterCount = useMemo(
-        () => recognizedText.replace(/\s/g, '').length,
-        [recognizedText]
+        () => resultText.replace(/\s/g, '').length,
+        [resultText]
     );
 
     const engineNeedsRefresh = Boolean(currentLanguageRef.current && currentLanguageRef.current !== language);
     const activeLanguage = LANGUAGE_OPTIONS.find(option => option.value === language);
-    const previewSource = previewMode === 'annotated' && annotatedUrl ? annotatedUrl : previewUrl;
-    const runtimeLabel = ocrResult
-        ? `${formatProviderLabel(ocrResult.runtime.detProvider)} / ${formatProviderLabel(ocrResult.runtime.recProvider)}`
-        : initSummary
-            ? `${formatProviderLabel(initSummary.detProvider)} / ${formatProviderLabel(initSummary.recProvider)}`
-            : '未初始化';
+    const previewSource = annotatedUrl || previewUrl;
 
     const totalDownloadedBytes = useMemo(
         () => downloadTasks.reduce((sum, task) => sum + task.loaded, 0),
@@ -213,9 +214,9 @@ const ImageOcrTool: React.FC = () => {
         return Math.min(100, Math.round((totalDownloadedBytes / totalDownloadBytes) * 100));
     }, [totalDownloadBytes, totalDownloadedBytes]);
 
-    const initializedAssetBytes = useMemo(
-        () => initSummary?.assets.reduce((sum, asset) => sum + asset.bytes, 0) ?? 0,
-        [initSummary]
+    const activeDownloadTask = useMemo(
+        () => downloadTasks.find(task => !task.done) ?? downloadTasks.at(-1) ?? null,
+        [downloadTasks]
     );
 
     const updateDownloadTask = useCallback((url: string, patch: Partial<ModelDownloadTask>) => {
@@ -361,11 +362,33 @@ const ImageOcrTool: React.FC = () => {
         }
     }, [annotatedUrl]);
 
+    useEffect(() => {
+        setResultText(recognizedText);
+        setRestoreResultText(recognizedText);
+        setIsFormattedResult(false);
+    }, [recognizedText]);
+
+    useEffect(() => {
+        if (!expandedPanel) return;
+
+        const handleKeyDown = (event: KeyboardEvent) => {
+            if (event.key === 'Escape') {
+                setExpandedPanel(null);
+            }
+        };
+
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [expandedPanel]);
+
     const resetOutput = useCallback(() => {
         setOcrResult(null);
         setAnnotatedUrl('');
-        setPreviewMode('original');
         setCopied(false);
+        setIsFormattedResult(false);
+        setExpandedPanel(null);
+        setResultText('');
+        setRestoreResultText('');
     }, []);
 
     const handleSelectFile = useCallback((file: File | null, source: UploadSource = 'upload') => {
@@ -425,7 +448,6 @@ const ImageOcrTool: React.FC = () => {
 
         await disposeEngine();
         setInitSummary(null);
-        setEngineMode(null);
         setDownloadTasks([]);
         setStatus('initializing');
         setStatusMessage('正在准备模型与运行时资源...');
@@ -462,7 +484,6 @@ const ImageOcrTool: React.FC = () => {
         ocrRef.current = instance;
         currentLanguageRef.current = language;
         setInitSummary(summary);
-        setEngineMode(ENABLE_OCR_WORKER ? 'worker' : 'main-thread');
         setStatus('ready');
         setStatusMessage('模型已就绪，现在可以继续识别新图片。');
 
@@ -505,7 +526,6 @@ const ImageOcrTool: React.FC = () => {
 
             setOcrResult(result);
             setAnnotatedUrl(URL.createObjectURL(annotatedBlob));
-            setPreviewMode('annotated');
             setStatus('ready');
             setStatusMessage(
                 result.items.length
@@ -527,10 +547,10 @@ const ImageOcrTool: React.FC = () => {
     }, [ensureEngine, ensureSdkModules, previewUrl, resetOutput, selectedFile]);
 
     const handleCopyText = useCallback(async () => {
-        if (!recognizedText) return;
+        if (!resultText) return;
 
         try {
-            await copyText(recognizedText);
+            await copyText(resultText);
             setCopied(true);
             window.setTimeout(() => {
                 if (mountedRef.current) {
@@ -541,30 +561,37 @@ const ImageOcrTool: React.FC = () => {
             console.error('Failed to copy OCR text:', copyError);
             setError('复制失败，请手动选择文本复制。');
         }
-    }, [recognizedText]);
-
-    const handleSelectAllText = useCallback(() => {
-        if (!resultTextareaRef.current) return;
-        resultTextareaRef.current.focus();
-        resultTextareaRef.current.select();
-    }, []);
+    }, [resultText]);
 
     const handleDownloadText = useCallback(() => {
-        if (!recognizedText || !selectedFile) return;
+        if (!resultText || !selectedFile) return;
 
-        const blob = new Blob([recognizedText], { type: 'text/plain;charset=utf-8' });
+        const blob = new Blob([resultText], { type: 'text/plain;charset=utf-8' });
         const baseName = selectedFile.name.replace(/\.[^.]+$/, '') || 'ocr-result';
         downloadBlob(blob, `${baseName}-ocr.txt`);
-    }, [recognizedText, selectedFile]);
+    }, [resultText, selectedFile]);
 
-    const handleDownloadAnnotated = useCallback(async () => {
-        if (!annotatedUrl || !selectedFile) return;
+    const handleToggleFormattedResult = useCallback(() => {
+        if (!resultText.trim()) return;
 
-        const response = await fetch(annotatedUrl);
-        const blob = await response.blob();
-        const baseName = selectedFile.name.replace(/\.[^.]+$/, '') || 'ocr-result';
-        downloadBlob(blob, `${baseName}-ocr-preview.png`);
-    }, [annotatedUrl, selectedFile]);
+        if (isFormattedResult) {
+            setResultText(restoreResultText);
+            setIsFormattedResult(false);
+            return;
+        }
+
+        setRestoreResultText(resultText);
+        setResultText(formatOcrText(resultText));
+        setIsFormattedResult(true);
+    }, [isFormattedResult, restoreResultText, resultText]);
+
+    const handleResultTextChange = useCallback((value: string) => {
+        setResultText(value);
+
+        if (!isFormattedResult) {
+            setRestoreResultText(value);
+        }
+    }, [isFormattedResult]);
 
     const handleReset = useCallback(() => {
         resetOutput();
@@ -598,102 +625,75 @@ const ImageOcrTool: React.FC = () => {
             : allDownloadsCompleted
                 ? '100%'
                 : '55%'
+        : status === 'processing'
+            ? '88%'
         : initSummary
             ? '100%'
-            : '0%';
+            : selectedFile
+                ? '12%'
+                : '0%';
+
+    const statusHeading = status === 'initializing'
+        ? `${activeDownloadTask?.label ?? '模型资源'}下载中`
+        : status === 'processing'
+            ? '正在识别图片中的文字'
+            : initSummary
+                ? '模型已就绪'
+                : selectedFile
+                    ? '图片已就绪'
+                    : '等待上传图片';
+
+    const statusBadge = status === 'initializing'
+        ? (downloadProgress !== null ? `${downloadProgress}%` : '下载中')
+        : status === 'processing'
+            ? '处理中'
+            : initSummary
+                ? '就绪'
+                : '';
+
+    const statusDetail = status === 'initializing' && activeDownloadTask
+        ? `当前阶段：${activeDownloadTask.label}`
+        : statusMessage;
 
     return (
         <div className="flex w-full flex-col items-center px-4 py-3 sm:px-6 lg:px-8">
-            <div className="mb-2 flex w-full max-w-6xl items-end justify-between gap-3">
-                <div className="space-y-1">
-                    <span className="inline-flex rounded-full bg-primary/10 px-3 py-1 text-[11px] font-semibold text-primary dark:bg-primary/15">
-                        PaddleOCR.js
-                    </span>
-                    <p className="text-2xl font-black tracking-tight text-gray-900 dark:text-white">
-                        图片 OCR 识别
-                    </p>
-                </div>
+            <div className="mb-2 flex w-full max-w-6xl flex-col items-center gap-1.5 text-center">
+                <p className="text-3xl font-black leading-tight tracking-tighter text-gray-900 dark:text-white sm:text-4xl">
+                    图片 OCR 识别
+                </p>
+                <p className="text-xs text-gray-500 dark:text-gray-400 sm:text-sm">
+                    上传、拖拽或直接粘贴图片，快速提取文字并整理结果。
+                </p>
             </div>
 
             <div className="flex w-full max-w-6xl flex-col gap-3">
                 <div className="rounded-2xl border border-gray-200 bg-white px-3 py-2 shadow-sm dark:border-gray-800 dark:bg-background-dark">
-                    <div className="flex flex-col gap-2 xl:flex-row xl:items-center xl:justify-between">
-                        <div className="min-w-0">
-                            <div className="flex items-center gap-2">
-                                <span className={`material-symbols-outlined text-lg ${
-                                    status === 'initializing' || status === 'processing'
-                                        ? 'text-primary'
-                                        : 'text-gray-500 dark:text-gray-400'
-                                }`}>
-                                    {status === 'initializing' || status === 'processing' ? 'hourglass_top' : 'info'}
-                                </span>
-                                <p className="text-sm font-semibold text-gray-900 dark:text-white">
-                                    模型状态
-                                </p>
-                            </div>
-                            <p className="mt-1 truncate text-sm text-gray-600 dark:text-gray-400">
-                                {statusMessage}
+                    <div className="flex flex-col gap-2">
+                        <div className="flex items-center justify-between gap-3 text-sm">
+                            <p className="font-semibold text-gray-900 dark:text-white">
+                                {statusHeading}
                             </p>
+                            {statusBadge && (
+                                <span className="rounded-full bg-gray-100 px-2.5 py-1 text-xs font-semibold text-gray-600 dark:bg-white/5 dark:text-gray-300">
+                                    {statusBadge}
+                                </span>
+                            )}
                         </div>
 
-                        <div className="w-full xl:max-w-[460px]">
-                            <div className="flex items-center justify-between text-xs font-medium text-gray-500 dark:text-gray-400">
-                                <span>
-                                    {status === 'initializing'
-                                        ? (allDownloadsCompleted ? '模型下载完成' : '模型下载中')
-                                        : initSummary
-                                            ? `已加载 ${initSummary.assets.length} 个模型`
-                                            : '尚未初始化'}
-                                </span>
-                                <span>
-                                    {status === 'initializing'
-                                        ? (downloadProgress !== null ? `${downloadProgress}%` : '进行中')
-                                        : initSummary
-                                            ? `${Math.round(initSummary.elapsedMs)} ms`
-                                            : (activeLanguage?.label ?? '')}
-                                </span>
-                            </div>
-
-                            <div className="mt-2 h-2 overflow-hidden rounded-full bg-gray-200 dark:bg-gray-800">
-                                <div
-                                    className={`h-full rounded-full bg-primary transition-all duration-300 ${
-                                        status === 'initializing' && downloadProgress === null && !allDownloadsCompleted
-                                            ? 'animate-pulse'
-                                            : ''
-                                    }`}
-                                    style={{ width: statusProgressWidth }}
-                                />
-                            </div>
-
-                            <div className="mt-2 flex flex-wrap gap-2 text-xs text-gray-500 dark:text-gray-400">
-                                {status === 'initializing' && downloadTasks.length > 0
-                                    ? downloadTasks.map(task => (
-                                        <span
-                                            key={task.url}
-                                            className="rounded-full bg-gray-100 px-2.5 py-1 dark:bg-white/5"
-                                        >
-                                            {task.label} {task.total ? `${formatBytes(task.loaded)} / ${formatBytes(task.total)}` : formatBytes(task.loaded)}
-                                        </span>
-                                    ))
-                                    : initSummary && (
-                                        <>
-                                            <span className="rounded-full bg-gray-100 px-2.5 py-1 dark:bg-white/5">
-                                                {activeLanguage?.label}
-                                            </span>
-                                            <span className="rounded-full bg-gray-100 px-2.5 py-1 dark:bg-white/5">
-                                                {runtimeLabel}
-                                            </span>
-                                            <span className="rounded-full bg-gray-100 px-2.5 py-1 dark:bg-white/5">
-                                                {engineMode === 'main-thread' ? '主线程' : 'Worker'}
-                                            </span>
-                                            <span className="rounded-full bg-gray-100 px-2.5 py-1 dark:bg-white/5">
-                                                {formatBytes(initializedAssetBytes)}
-                                            </span>
-                                        </>
-                                    )
-                                }
-                            </div>
+                        <div className="h-2 overflow-hidden rounded-full bg-gray-200 dark:bg-gray-800">
+                            <div
+                                className={`h-full rounded-full bg-primary transition-all duration-300 ${
+                                    status === 'initializing' && downloadProgress === null && !allDownloadsCompleted
+                                        ? 'animate-pulse'
+                                        : ''
+                                }`}
+                                style={{ width: statusProgressWidth }}
+                            />
                         </div>
+
+                        <p className="truncate text-xs text-gray-500 dark:text-gray-400">
+                            {statusDetail}
+                        </p>
                     </div>
                 </div>
 
@@ -707,7 +707,7 @@ const ImageOcrTool: React.FC = () => {
                     <div className="rounded-2xl border border-gray-200 bg-white p-3 shadow-sm dark:border-gray-800 dark:bg-background-dark">
                         {!selectedFile || !previewUrl ? (
                             <label
-                                className={`flex min-h-[300px] cursor-pointer flex-col items-center justify-center gap-4 rounded-2xl border-2 border-dashed px-6 py-8 text-center transition-all ${uploadZoneClassName}`}
+                                className={`flex min-h-[280px] cursor-pointer flex-col items-center justify-center gap-4 rounded-2xl border-2 border-dashed px-6 py-8 text-center transition-all ${uploadZoneClassName}`}
                                 onDragEnter={() => setIsDragActive(true)}
                                 onDragOver={(event) => {
                                     event.preventDefault();
@@ -743,7 +743,7 @@ const ImageOcrTool: React.FC = () => {
                             </label>
                         ) : (
                             <div
-                                className={`flex flex-col gap-3 rounded-2xl transition-all ${isDragActive ? 'bg-primary/5 shadow-[0_0_0_6px_rgba(96,122,251,0.08)] dark:bg-primary/10' : ''}`}
+                                className={`flex flex-col gap-2 rounded-2xl transition-all ${isDragActive ? 'bg-primary/5 shadow-[0_0_0_6px_rgba(96,122,251,0.08)] dark:bg-primary/10' : ''}`}
                                 onDragEnter={() => setIsDragActive(true)}
                                 onDragOver={(event) => {
                                     event.preventDefault();
@@ -774,31 +774,7 @@ const ImageOcrTool: React.FC = () => {
                                     </div>
 
                                     <div className="flex flex-wrap gap-2">
-                                        {ocrResult && annotatedUrl && (
-                                            <div className="flex flex-wrap gap-2">
-                                                {[
-                                                    { value: 'annotated' as PreviewMode, label: '识别标注图', icon: 'document_scanner' },
-                                                    { value: 'original' as PreviewMode, label: '原始图片', icon: 'image' },
-                                                ].map(option => (
-                                                    <button
-                                                        key={option.value}
-                                                        onClick={() => setPreviewMode(option.value)}
-                                                        className={`inline-flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium transition-colors ${
-                                                            previewMode === option.value
-                                                                ? 'bg-primary/10 text-primary'
-                                                                : 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-white/5 dark:text-gray-300 dark:hover:bg-white/10'
-                                                        }`}
-                                                    >
-                                                        <span className="material-symbols-outlined text-base">
-                                                            {option.icon}
-                                                        </span>
-                                                        {option.label}
-                                                    </button>
-                                                ))}
-                                            </div>
-                                        )}
-
-                                        <label className="inline-flex cursor-pointer items-center gap-2 rounded-xl border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-100 dark:border-gray-700 dark:text-gray-200 dark:hover:bg-gray-800">
+                                        <label className="inline-flex min-w-[104px] cursor-pointer items-center justify-center gap-2 rounded-xl border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-100 dark:border-gray-700 dark:text-gray-200 dark:hover:bg-gray-800">
                                             <span className="material-symbols-outlined text-base">sync</span>
                                             更换图片
                                             <input
@@ -811,7 +787,7 @@ const ImageOcrTool: React.FC = () => {
                                         </label>
                                         <button
                                             onClick={handleReset}
-                                            className="inline-flex items-center gap-2 rounded-xl border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-100 dark:border-gray-700 dark:text-gray-200 dark:hover:bg-gray-800"
+                                            className="inline-flex min-w-[88px] items-center justify-center gap-2 rounded-xl border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-100 dark:border-gray-700 dark:text-gray-200 dark:hover:bg-gray-800"
                                         >
                                             <span className="material-symbols-outlined text-base">delete</span>
                                             清空
@@ -819,20 +795,34 @@ const ImageOcrTool: React.FC = () => {
                                     </div>
                                 </div>
 
-                                <div className="flex min-h-[340px] items-center justify-center overflow-hidden rounded-2xl border border-gray-200 bg-gray-50 p-3 dark:border-gray-800 dark:bg-gray-900/40">
+                                <div
+                                    role="button"
+                                    tabIndex={0}
+                                    onClick={() => setExpandedPanel('image')}
+                                    onKeyDown={(event) => {
+                                        if (event.key === 'Enter' || event.key === ' ') {
+                                            event.preventDefault();
+                                            setExpandedPanel('image');
+                                        }
+                                    }}
+                                    className="group relative flex min-h-[280px] cursor-zoom-in items-center justify-center overflow-hidden rounded-2xl border border-gray-200 bg-gray-50 p-3 outline-none transition-colors focus:border-primary dark:border-gray-800 dark:bg-gray-900/40"
+                                >
                                     <img
                                         src={previewSource}
                                         alt="OCR preview"
-                                        className="max-h-[440px] max-w-full rounded-xl object-contain"
+                                        className="max-h-[360px] max-w-full rounded-xl object-contain"
                                     />
+                                    <div className="pointer-events-none absolute right-4 top-4 rounded-full bg-black/65 px-3 py-1.5 text-xs font-medium text-white opacity-0 transition-opacity group-hover:opacity-100 group-focus:opacity-100">
+                                        点击放大
+                                    </div>
                                 </div>
                             </div>
                         )}
                     </div>
 
                     <div className="rounded-2xl border border-gray-200 bg-white p-3 shadow-sm dark:border-gray-800 dark:bg-background-dark">
-                        <div className="flex h-full flex-col gap-3">
-                            <div className="space-y-2">
+                        <div className="flex h-full flex-col gap-2.5">
+                            <div className="space-y-1.5">
                                 <div className="flex items-center justify-between gap-3">
                                     <p className="text-base font-semibold text-gray-900 dark:text-white">
                                         语言模型
@@ -869,7 +859,7 @@ const ImageOcrTool: React.FC = () => {
                             <button
                                 onClick={handleRecognize}
                                 disabled={!selectedFile || status === 'initializing' || status === 'processing'}
-                                className="flex items-center justify-center gap-2 rounded-2xl bg-primary px-4 py-3.5 text-sm font-semibold text-white transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
+                                className="flex items-center justify-center gap-2 rounded-2xl bg-primary px-4 py-3 text-sm font-semibold text-white transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
                             >
                                 {(status === 'initializing' || status === 'processing') && (
                                     <span className="spinner-small"></span>
@@ -885,7 +875,7 @@ const ImageOcrTool: React.FC = () => {
                             </button>
 
                             <div className="grid grid-cols-3 gap-2">
-                                <div className="rounded-xl border border-gray-200 bg-gray-50 px-3 py-3 dark:border-gray-800 dark:bg-gray-900/40">
+                                <div className="rounded-xl border border-gray-200 bg-gray-50 px-3 py-2.5 dark:border-gray-800 dark:bg-gray-900/40">
                                     <p className="text-[11px] font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">
                                         行数
                                     </p>
@@ -893,7 +883,7 @@ const ImageOcrTool: React.FC = () => {
                                         {ocrResult?.items.length ?? '--'}
                                     </p>
                                 </div>
-                                <div className="rounded-xl border border-gray-200 bg-gray-50 px-3 py-3 dark:border-gray-800 dark:bg-gray-900/40">
+                                <div className="rounded-xl border border-gray-200 bg-gray-50 px-3 py-2.5 dark:border-gray-800 dark:bg-gray-900/40">
                                     <p className="text-[11px] font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">
                                         字符
                                     </p>
@@ -901,7 +891,7 @@ const ImageOcrTool: React.FC = () => {
                                         {recognizedText ? textCharacterCount : '--'}
                                     </p>
                                 </div>
-                                <div className="rounded-xl border border-gray-200 bg-gray-50 px-3 py-3 dark:border-gray-800 dark:bg-gray-900/40">
+                                <div className="rounded-xl border border-gray-200 bg-gray-50 px-3 py-2.5 dark:border-gray-800 dark:bg-gray-900/40">
                                     <p className="text-[11px] font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">
                                         耗时
                                     </p>
@@ -912,29 +902,35 @@ const ImageOcrTool: React.FC = () => {
                             </div>
 
                             <div className="rounded-2xl border border-primary/15 bg-gradient-to-b from-primary/5 to-white p-3 dark:border-primary/15 dark:from-primary/10 dark:to-background-dark">
-                                <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                                <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
                                     <div>
                                         <p className="text-sm font-semibold text-gray-900 dark:text-white">
-                                            纯文本输出
+                                            识别结果
                                         </p>
                                         <p className="text-xs text-gray-500 dark:text-gray-400">
-                                            点击文本框即可直接复制或选中内容
+                                            点击文本框可放大查看
                                         </p>
                                     </div>
 
-                                    <div className="flex flex-wrap gap-2">
+                                    <div className="grid w-full grid-cols-3 gap-2 sm:w-auto sm:min-w-[316px]">
                                         <button
-                                            onClick={handleSelectAllText}
-                                            disabled={!recognizedText}
-                                            className="inline-flex items-center gap-2 rounded-xl border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-white disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-700 dark:text-gray-200 dark:hover:bg-white/10"
+                                            onClick={handleToggleFormattedResult}
+                                            disabled={!resultText}
+                                            className={`inline-flex min-w-[118px] items-center justify-center gap-2 rounded-xl border px-3 py-2 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
+                                                isFormattedResult
+                                                    ? 'border-primary/30 bg-primary/10 text-primary'
+                                                    : 'border-gray-300 text-gray-700 hover:bg-white dark:border-gray-700 dark:text-gray-200 dark:hover:bg-white/10'
+                                            }`}
                                         >
-                                            <span className="material-symbols-outlined text-base">select_all</span>
-                                            全选
+                                            <span className="material-symbols-outlined text-base">
+                                                {isFormattedResult ? 'history' : 'auto_awesome'}
+                                            </span>
+                                            {isFormattedResult ? '恢复原文' : '格式化'}
                                         </button>
                                         <button
                                             onClick={handleCopyText}
-                                            disabled={!recognizedText}
-                                            className="inline-flex items-center gap-2 rounded-xl border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-white disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-700 dark:text-gray-200 dark:hover:bg-white/10"
+                                            disabled={!resultText}
+                                            className="inline-flex min-w-[108px] items-center justify-center gap-2 rounded-xl border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-white disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-700 dark:text-gray-200 dark:hover:bg-white/10"
                                         >
                                             <span className="material-symbols-outlined text-base">
                                                 {copied ? 'check' : 'content_copy'}
@@ -943,70 +939,27 @@ const ImageOcrTool: React.FC = () => {
                                         </button>
                                         <button
                                             onClick={handleDownloadText}
-                                            disabled={!recognizedText}
-                                            className="inline-flex items-center gap-2 rounded-xl border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-white disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-700 dark:text-gray-200 dark:hover:bg-white/10"
+                                            disabled={!resultText}
+                                            className="inline-flex min-w-[108px] items-center justify-center gap-2 rounded-xl border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-white disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-700 dark:text-gray-200 dark:hover:bg-white/10"
                                         >
                                             <span className="material-symbols-outlined text-base">description</span>
-                                            下载 TXT
+                                            下载文件
                                         </button>
                                     </div>
                                 </div>
 
-                                <textarea
-                                    ref={resultTextareaRef}
-                                    value={recognizedText}
-                                    readOnly
-                                    spellCheck={false}
-                                    className="h-36 w-full resize-none rounded-2xl border border-primary/20 bg-white px-4 py-3 text-sm leading-6 text-gray-800 outline-none transition-shadow focus:border-primary/40 focus:shadow-[0_0_0_4px_rgba(96,122,251,0.08)] dark:border-primary/15 dark:bg-gray-950/30 dark:text-gray-100"
-                                    placeholder="识别完成后，文字会显示在这里"
-                                />
-                            </div>
-
-                            <div className="rounded-2xl border border-gray-200 p-3 dark:border-gray-800">
-                                <div className="mb-3 flex items-center justify-between gap-3">
-                                    <div>
-                                        <p className="text-sm font-semibold text-gray-900 dark:text-white">
-                                            识别结果
-                                        </p>
-                                        <p className="text-xs text-gray-500 dark:text-gray-400">
-                                            {runtimeLabel}
-                                        </p>
-                                    </div>
-                                    <button
-                                        onClick={handleDownloadAnnotated}
-                                        disabled={!annotatedUrl}
-                                        className="inline-flex items-center gap-2 rounded-xl border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-700 dark:text-gray-200 dark:hover:bg-gray-800"
-                                    >
-                                        <span className="material-symbols-outlined text-base">download</span>
-                                        标注图
-                                    </button>
-                                </div>
-
-                                <div className="flex flex-wrap gap-2">
-                                    {ocrResult?.items.length ? (
-                                        <>
-                                            {ocrResult.items.slice(0, 2).map((item, index) => (
-                                                <div
-                                                    key={`${item.text}-${index}`}
-                                                    className="min-w-0 flex-1 rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 dark:border-gray-800 dark:bg-gray-900/40"
-                                                >
-                                                    <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
-                                                        第 {index + 1} 行
-                                                    </p>
-                                                    <p className="mt-1 truncate text-sm text-gray-800 dark:text-gray-100">
-                                                        {item.text || '（空结果）'}
-                                                    </p>
-                                                </div>
-                                            ))}
-                                            {ocrResult.items.length > 2 && (
-                                                <div className="rounded-xl border border-dashed border-gray-300 px-3 py-2 text-sm text-gray-500 dark:border-gray-700 dark:text-gray-400">
-                                                    其余 {ocrResult.items.length - 2} 行可在上方文本框查看
-                                                </div>
-                                            )}
-                                        </>
-                                    ) : (
-                                        <div className="rounded-xl border border-dashed border-gray-300 px-4 py-4 text-center text-sm text-gray-500 dark:border-gray-700 dark:text-gray-400">
-                                            识别后的文本摘要会显示在这里。
+                                <div className="relative">
+                                    <textarea
+                                        value={resultText}
+                                        onChange={(event) => handleResultTextChange(event.target.value)}
+                                        spellCheck={false}
+                                        onClick={() => setExpandedPanel('text')}
+                                        className="h-[240px] w-full resize-none rounded-2xl border border-primary/20 bg-white px-4 py-3 text-sm leading-6 text-gray-800 outline-none transition-shadow focus:border-primary/40 focus:shadow-[0_0_0_4px_rgba(96,122,251,0.08)] dark:border-primary/15 dark:bg-gray-950/30 dark:text-gray-100 xl:h-[280px]"
+                                        placeholder="识别完成后，文字会显示在这里"
+                                    />
+                                    {resultText && (
+                                        <div className="pointer-events-none absolute right-4 top-4 rounded-full bg-black/65 px-3 py-1.5 text-xs font-medium text-white">
+                                            点击放大
                                         </div>
                                     )}
                                 </div>
@@ -1015,6 +968,54 @@ const ImageOcrTool: React.FC = () => {
                     </div>
                 </div>
             </div>
+
+            {expandedPanel && (
+                <div
+                    className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm"
+                    onClick={() => setExpandedPanel(null)}
+                >
+                    <div
+                        className="w-full max-w-4xl rounded-[28px] border border-white/10 bg-white p-4 shadow-2xl dark:bg-background-dark"
+                        onClick={(event) => event.stopPropagation()}
+                    >
+                        <div className="mb-4 flex items-center justify-between gap-3">
+                            <div>
+                                <p className="text-lg font-semibold text-gray-900 dark:text-white">
+                                    {expandedPanel === 'image' ? '识别预览' : '识别结果'}
+                                </p>
+                                <p className="text-sm text-gray-500 dark:text-gray-400">
+                                    {expandedPanel === 'image'
+                                        ? (annotatedUrl ? '当前显示识别后的标注效果' : '当前显示原图')
+                                        : (isFormattedResult ? '当前为格式化后的文本' : '当前为原始识别文本')}
+                                </p>
+                            </div>
+                            <button
+                                onClick={() => setExpandedPanel(null)}
+                                className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-gray-300 text-gray-700 transition-colors hover:bg-gray-100 dark:border-gray-700 dark:text-gray-200 dark:hover:bg-gray-800"
+                            >
+                                <span className="material-symbols-outlined text-xl">close</span>
+                            </button>
+                        </div>
+
+                        {expandedPanel === 'image' ? (
+                            <div className="flex max-h-[88vh] items-center justify-center overflow-auto rounded-2xl bg-gray-50 p-4 dark:bg-gray-950/40">
+                                <img
+                                    src={previewSource}
+                                    alt="Expanded OCR preview"
+                                    className="max-h-[84vh] max-w-[92vw] rounded-2xl object-contain"
+                                />
+                            </div>
+                        ) : (
+                            <textarea
+                                value={resultText}
+                                onChange={(event) => handleResultTextChange(event.target.value)}
+                                spellCheck={false}
+                                className="h-[70vh] w-full resize-none rounded-2xl border border-gray-200 bg-white px-5 py-4 text-sm leading-7 text-gray-800 outline-none focus:border-primary dark:border-gray-800 dark:bg-gray-950/40 dark:text-gray-100"
+                            />
+                        )}
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

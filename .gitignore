@@ -25,3 +25,4 @@ docs
 *.sw?
 
 .DS_Store
+.playwright-cli
