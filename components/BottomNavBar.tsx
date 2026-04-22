@@ -8,6 +8,7 @@ type ToolType =
     | 'image-comparison'
     | 'image-round-corner'
     | 'photo-collage'
+    | 'image-ocr'
     | 'code-highlight'
     | 'text-formatter'
     | 'json-formatter'
@@ -79,6 +80,11 @@ const TOOLS: Tool[] = [
         icon: 'grid_view',
     },
     {
+        id: 'image-ocr',
+        name: 'OCR',
+        icon: 'document_scanner',
+    },
+    {
         id: 'table-converter',
         name: '表格',
         icon: 'table_chart',
@@ -113,13 +119,15 @@ interface BottomNavBarProps {
 const BottomNavBar: React.FC<BottomNavBarProps> = ({ activeTool, setActiveTool }) => {
     return (
         <div className="md:hidden fixed bottom-0 left-0 right-0 bg-gray-100 dark:bg-gray-800 border-t border-border-light dark:border-border-dark z-10">
-            <div className="flex justify-around items-center h-16">
-                <ThemeToggle />
+            <div className="flex h-16 items-center gap-2 overflow-x-auto px-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                <div className="shrink-0">
+                    <ThemeToggle />
+                </div>
                 {TOOLS.map(tool => (
                     <button
                         key={tool.id}
                         onClick={() => setActiveTool(tool.id)}
-                        className={`flex flex-col items-center justify-center transition-all duration-200 ${
+                        className={`flex min-w-[56px] shrink-0 flex-col items-center justify-center transition-all duration-200 ${
                             activeTool === tool.id
                                 ? 'text-gray-900 dark:text-gray-100'
                                 : 'text-gray-500 dark:text-gray-400'
