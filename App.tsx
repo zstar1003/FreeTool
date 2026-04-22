@@ -23,6 +23,7 @@ const PromptGeneratorTool = lazy(() => import('./components/PromptGeneratorTool'
 const MBTITestTool = lazy(() => import('./components/MBTITestTool'));
 const ImageToPromptTool = lazy(() => import('./components/ImageToPromptTool'));
 const ImageWatermarkRemoverTool = lazy(() => import('./components/ImageWatermarkRemoverTool'));
+const ImageOcrTool = lazy(() => import('./components/ImageOcrTool'));
 const MindMapTool = lazy(() => import('./components/MindMapTool'));
 const DrawingTool = lazy(() => import('./components/DrawingTool'));
 
@@ -43,6 +44,7 @@ type ToolType =
     | 'image-comparison'
     | 'image-round-corner'
     | 'photo-collage'
+    | 'image-ocr'
     | 'code-highlight'
     | 'text-formatter'
     | 'json-formatter'
@@ -108,6 +110,7 @@ const TOOL_CATEGORIES: ToolCategory[] = [
             { id: 'image-editor', name: '图片快速编辑', icon: 'edit', component: ImageEditorTool },
             { id: 'image-comparison', name: '多图自由拼接', icon: 'layers', component: ImageComparisonTool },
             { id: 'image-round-corner', name: '图片圆角处理', icon: 'rounded_corner', component: ImageRoundCornerTool },
+            { id: 'image-ocr', name: '图片OCR识别', icon: 'document_scanner', component: ImageOcrTool },
             { id: 'photo-collage', name: '模板快速拼接', icon: 'grid_view', component: PhotoCollageTool },
             { id: 'image-watermark-remover', name: '图片水印去除', icon: 'healing', component: ImageWatermarkRemoverTool },
         ],
