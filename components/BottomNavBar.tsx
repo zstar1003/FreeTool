@@ -4,11 +4,14 @@ import ThemeToggle from './ThemeToggle';
 type ToolType =
     | 'translate'
     | 'image-converter'
+    | 'image-metadata'
     | 'image-editor'
     | 'image-comparison'
     | 'image-round-corner'
     | 'photo-collage'
     | 'image-ocr'
+    | 'image-to-prompt'
+    | 'image-watermark-remover'
     | 'code-highlight'
     | 'text-formatter'
     | 'json-formatter'
@@ -20,7 +23,11 @@ type ToolType =
     | 'pdf-to-ppt'
     | 'pdf-to-image'
     | 'resume-generator'
-    | 'prompt-generator';
+    | 'prompt-generator'
+    | 'mbti-test'
+    | 'mind-map'
+    | 'drawing'
+    | 'vram-calculator';
 
 interface Tool {
     id: ToolType;
@@ -58,6 +65,11 @@ const TOOLS: Tool[] = [
         id: 'image-converter',
         name: '图片',
         icon: 'image',
+    },
+    {
+        id: 'image-metadata',
+        name: '元信息',
+        icon: 'fingerprint',
     },
     {
         id: 'image-editor',

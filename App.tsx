@@ -5,6 +5,7 @@ import ThemeToggle from './components/ThemeToggle';
 // 懒加载组件 - 提升首屏加载速度
 const TranslateTool = lazy(() => import('./components/TranslateTool'));
 const ImageConverterTool = lazy(() => import('./components/ImageConverterTool'));
+const ImageMetadataTool = lazy(() => import('./components/ImageMetadataTool'));
 const ImageEditorTool = lazy(() => import('./components/ImageEditorTool'));
 const ImageComparisonTool = lazy(() => import('./components/ImageComparisonTool'));
 const ImageRoundCornerTool = lazy(() => import('./components/ImageRoundCornerTool'));
@@ -42,6 +43,7 @@ const ACTIVE_TOOL_KEY = 'freetool-active-tool';
 type ToolType =
     | 'translate'
     | 'image-converter'
+    | 'image-metadata'
     | 'image-editor'
     | 'image-comparison'
     | 'image-round-corner'
@@ -110,6 +112,7 @@ const TOOL_CATEGORIES: ToolCategory[] = [
         icon: 'image',
         tools: [
             { id: 'image-converter', name: '图片格式转换', icon: 'image', component: ImageConverterTool },
+            { id: 'image-metadata', name: '图片元信息查看', icon: 'fingerprint', component: ImageMetadataTool },
             { id: 'image-editor', name: '图片快速编辑', icon: 'edit', component: ImageEditorTool },
             { id: 'image-comparison', name: '多图自由拼接', icon: 'layers', component: ImageComparisonTool },
             { id: 'image-round-corner', name: '图片圆角处理', icon: 'rounded_corner', component: ImageRoundCornerTool },
