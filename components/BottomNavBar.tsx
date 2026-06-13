@@ -1,27 +1,6 @@
 import React from 'react';
 import ThemeToggle from './ThemeToggle';
-
-type ToolType =
-    | 'translate'
-    | 'image-converter'
-    | 'ai-image-detection'
-    | 'image-editor'
-    | 'image-comparison'
-    | 'image-round-corner'
-    | 'photo-collage'
-    | 'image-ocr'
-    | 'code-highlight'
-    | 'text-formatter'
-    | 'json-formatter'
-    | 'xml-formatter'
-    | 'math-formula'
-    | 'table-converter'
-    | 'video-aspect-converter'
-    | 'text-diff'
-    | 'pdf-to-ppt'
-    | 'pdf-to-image'
-    | 'resume-generator'
-    | 'prompt-generator';
+import { ToolType } from '../types/tools';
 
 interface Tool {
     id: ToolType;
@@ -89,6 +68,11 @@ const TOOLS: Tool[] = [
         id: 'image-ocr',
         name: 'OCR',
         icon: 'document_scanner',
+    },
+    {
+        id: 'pcb-art',
+        name: '四色板',
+        icon: 'developer_board',
     },
     {
         id: 'table-converter',

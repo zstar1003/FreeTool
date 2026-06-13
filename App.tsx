@@ -1,6 +1,7 @@
 import React, { useState, lazy, Suspense, useEffect, useCallback, useRef } from 'react';
 import BottomNavBar from './components/BottomNavBar';
 import ThemeToggle from './components/ThemeToggle';
+import { ToolType } from './types/tools';
 
 // 懒加载组件 - 提升首屏加载速度
 const TranslateTool = lazy(() => import('./components/TranslateTool'));
@@ -29,6 +30,7 @@ const ImageOcrTool = lazy(() => import('./components/ImageOcrTool'));
 const MindMapTool = lazy(() => import('./components/MindMapTool'));
 const DrawingTool = lazy(() => import('./components/DrawingTool'));
 const VRAMCalculatorTool = lazy(() => import('./components/VRAMCalculatorTool'));
+const PcbArtTool = lazy(() => import('./components/PcbArtTool'));
 
 // 获取资源路径的辅助函数
 const getAssetUrl = (path: string) => {
@@ -39,34 +41,6 @@ const getAssetUrl = (path: string) => {
 // localStorage key
 const PINNED_TOOLS_KEY = 'freetool-pinned-tools';
 const ACTIVE_TOOL_KEY = 'freetool-active-tool';
-
-type ToolType =
-    | 'translate'
-    | 'image-converter'
-    | 'ai-image-detection'
-    | 'image-editor'
-    | 'image-comparison'
-    | 'image-round-corner'
-    | 'photo-collage'
-    | 'image-ocr'
-    | 'code-highlight'
-    | 'text-formatter'
-    | 'json-formatter'
-    | 'xml-formatter'
-    | 'math-formula'
-    | 'table-converter'
-    | 'video-aspect-converter'
-    | 'text-diff'
-    | 'pdf-to-ppt'
-    | 'pdf-to-image'
-    | 'resume-generator'
-    | 'prompt-generator'
-    | 'mbti-test'
-    | 'image-to-prompt'
-    | 'image-watermark-remover'
-    | 'mind-map'
-    | 'drawing'
-    | 'vram-calculator';
 
 type CategoryType = 'text' | 'image' | 'data' | 'media' | 'ai';
 
@@ -119,6 +93,7 @@ const TOOL_CATEGORIES: ToolCategory[] = [
             { id: 'image-ocr', name: '图片OCR识别', icon: 'document_scanner', component: ImageOcrTool },
             { id: 'photo-collage', name: '模板快速拼接', icon: 'grid_view', component: PhotoCollageTool },
             { id: 'image-watermark-remover', name: '图片水印去除', icon: 'healing', component: ImageWatermarkRemoverTool },
+            { id: 'pcb-art', name: '四色PCB艺术画', icon: 'developer_board', component: PcbArtTool },
         ],
     },
     {
@@ -407,7 +382,7 @@ const App: React.FC = () => {
                                 {/* 置顶工具列表 */}
                                 <div
                                     className={`overflow-hidden transition-all duration-200 ${
-                                        pinnedExpanded ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'
+                                        pinnedExpanded ? 'max-h-[60rem] opacity-100' : 'max-h-0 opacity-0'
                                     }`}
                                 >
                                     <div className="flex flex-col gap-1 pl-4 pt-1 pb-2">
@@ -488,7 +463,7 @@ const App: React.FC = () => {
                                     {/* 子工具列表 */}
                                     <div
                                         className={`overflow-hidden transition-all duration-200 ${
-                                            isExpanded ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'
+                                            isExpanded ? 'max-h-[60rem] opacity-100' : 'max-h-0 opacity-0'
                                         }`}
                                     >
                                         <div className="flex flex-col gap-1 pl-4 pt-1 pb-2">
