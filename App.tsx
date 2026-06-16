@@ -93,7 +93,7 @@ const TOOL_CATEGORIES: ToolCategory[] = [
             { id: 'image-ocr', name: '图片OCR识别', icon: 'document_scanner', component: ImageOcrTool },
             { id: 'photo-collage', name: '模板快速拼接', icon: 'grid_view', component: PhotoCollageTool },
             { id: 'image-watermark-remover', name: '图片水印去除', icon: 'healing', component: ImageWatermarkRemoverTool },
-            { id: 'pcb-art', name: '四色PCB艺术画', icon: 'developer_board', component: PcbArtTool },
+            { id: 'pcb-art', name: 'PCB艺术画', icon: 'developer_board', component: PcbArtTool },
         ],
     },
     {

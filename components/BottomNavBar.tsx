@@ -71,7 +71,7 @@ const TOOLS: Tool[] = [
     },
     {
         id: 'pcb-art',
-        name: '四色板',
+        name: 'PCB艺术画',
         icon: 'developer_board',
     },
     {

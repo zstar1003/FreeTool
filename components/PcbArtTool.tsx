@@ -1,46 +1,48 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import JSZip from 'jszip';
 import {
-    ArtColor,
-    clonePalette,
     MaterialKey,
-    PCB_PALETTE_PRESETS,
-    QuantizeMode,
+    PCB_ART_COLORS,
     quantizeImageData,
     renderArtwork,
     renderBinaryMask,
+    renderSeparationArtwork,
 } from '../utils/pcbArt';
 
-type PreviewKey = 'artwork' | 'original' | 'copper' | 'solderMaskOpening' | 'silkscreen';
+type PreviewKey =
+    | 'artwork'
+    | 'original'
+    | 'copper'
+    | 'solderMaskOpening'
+    | 'backSolderMaskOpening'
+    | 'silkscreen';
+type GeneratedKey = Exclude<PreviewKey, 'original'> | 'separation' | `color${number}`;
 
 interface ProcessedResult {
     width: number;
     height: number;
-    urls: Record<Exclude<PreviewKey, 'original'> | `color${number}`, string>;
-    blobs: Record<Exclude<PreviewKey, 'original'> | `color${number}`, Blob>;
+    urls: Record<GeneratedKey, string>;
+    blobs: Record<GeneratedKey, Blob>;
     distribution: number[];
 }
 
 const PREVIEW_TABS: { id: PreviewKey; label: string; icon: string }[] = [
-    { id: 'artwork', label: '四色效果', icon: 'palette' },
+    { id: 'artwork', label: '板材效果', icon: 'developer_board' },
     { id: 'original', label: '原图', icon: 'image' },
     { id: 'copper', label: '铜皮', icon: 'layers' },
-    { id: 'solderMaskOpening', label: '阻焊开窗', icon: 'crop_free' },
+    { id: 'solderMaskOpening', label: '正面开窗', icon: 'crop_free' },
+    { id: 'backSolderMaskOpening', label: '背面开窗', icon: 'flip' },
     { id: 'silkscreen', label: '丝印', icon: 'format_paint' },
 ];
 
 const MATERIALS: { key: MaterialKey; label: string; shortLabel: string }[] = [
-    { key: 'copper', label: '包含铜皮', shortLabel: '铜' },
-    { key: 'solderMask', label: '覆盖阻焊', shortLabel: '阻焊' },
-    { key: 'silkscreen', label: '包含丝印', shortLabel: '丝印' },
+    { key: 'copper', label: '正面铜皮', shortLabel: '铜' },
+    { key: 'solderMask', label: '正面阻焊', shortLabel: '正阻' },
+    { key: 'backSolderMask', label: '背面阻焊', shortLabel: '背阻' },
+    { key: 'silkscreen', label: '白色丝印', shortLabel: '丝印' },
 ];
 
-const OUTPUT_SIZES = [
-    { value: 800, label: '快速预览', hint: '最长边 800 px' },
-    { value: 1400, label: '标准输出', hint: '最长边 1400 px' },
-    { value: 2200, label: '精细制版', hint: '最长边 2200 px' },
-    { value: 3600, label: '高精制版', hint: '最长边 3600 px' },
-];
+const MAX_OUTPUT_DIMENSION = 3600;
 
 const canvasToBlob = (imageData: ImageData): Promise<Blob> =>
     new Promise((resolve, reject) => {
@@ -84,17 +86,9 @@ const safeFilename = (name: string) =>
     name.replace(/\.[^/.]+$/, '').replace(/[^\w\u4e00-\u9fa5-]+/g, '_') || 'pcb_art';
 
 const PcbArtTool: React.FC = () => {
-    const defaultPreset = PCB_PALETTE_PRESETS[0];
     const [selectedFile, setSelectedFile] = useState<File | null>(null);
     const [sourceUrl, setSourceUrl] = useState('');
     const [sourceSize, setSourceSize] = useState({ width: 0, height: 0 });
-    const [presetId, setPresetId] = useState(defaultPreset.id);
-    const [palette, setPalette] = useState<ArtColor[]>(clonePalette(defaultPreset.colors));
-    const [mode, setMode] = useState<QuantizeMode>('tone');
-    const [brightness, setBrightness] = useState(0);
-    const [contrast, setContrast] = useState(110);
-    const [smoothing, setSmoothing] = useState(2);
-    const [maxDimension, setMaxDimension] = useState(1400);
     const [activePreview, setActivePreview] = useState<PreviewKey>('artwork');
     const [result, setResult] = useState<ProcessedResult | null>(null);
     const [isProcessing, setIsProcessing] = useState(false);
@@ -172,7 +166,7 @@ const PcbArtTool: React.FC = () => {
 
         try {
             const image = await loadImage(sourceUrl);
-            const scale = Math.min(1, maxDimension / Math.max(image.naturalWidth, image.naturalHeight));
+            const scale = Math.min(1, MAX_OUTPUT_DIMENSION / Math.max(image.naturalWidth, image.naturalHeight));
             const width = Math.max(1, Math.round(image.naturalWidth * scale));
             const height = Math.max(1, Math.round(image.naturalHeight * scale));
             const sourceCanvas = document.createElement('canvas');
@@ -188,23 +182,21 @@ const PcbArtTool: React.FC = () => {
 
             await new Promise<void>(resolve => requestAnimationFrame(() => resolve()));
             const sourceData = sourceContext.getImageData(0, 0, width, height);
-            const quantized = quantizeImageData(sourceData, palette, {
-                mode,
-                brightness: brightness / 100,
-                contrast: contrast / 100,
-                smoothing,
-            });
+            const quantized = quantizeImageData(sourceData);
 
             const blobs = {} as ProcessedResult['blobs'];
             blobs.artwork = await canvasToBlob(
-                renderArtwork(quantized.labels, width, height, palette)
+                renderArtwork(quantized.labels, width, height, sourceData)
+            );
+            blobs.separation = await canvasToBlob(
+                renderSeparationArtwork(quantized.labels, width, height)
             );
             blobs.copper = await canvasToBlob(
                 renderBinaryMask(
                     quantized.labels,
                     width,
                     height,
-                    label => palette[label].recipe.copper
+                    label => PCB_ART_COLORS[label].recipe.copper
                 )
             );
             blobs.solderMaskOpening = await canvasToBlob(
@@ -212,7 +204,15 @@ const PcbArtTool: React.FC = () => {
                     quantized.labels,
                     width,
                     height,
-                    label => !palette[label].recipe.solderMask
+                    label => !PCB_ART_COLORS[label].recipe.solderMask
+                )
+            );
+            blobs.backSolderMaskOpening = await canvasToBlob(
+                renderBinaryMask(
+                    quantized.labels,
+                    width,
+                    height,
+                    label => !PCB_ART_COLORS[label].recipe.backSolderMask
                 )
             );
             blobs.silkscreen = await canvasToBlob(
@@ -220,11 +220,11 @@ const PcbArtTool: React.FC = () => {
                     quantized.labels,
                     width,
                     height,
-                    label => palette[label].recipe.silkscreen
+                    label => PCB_ART_COLORS[label].recipe.silkscreen
                 )
             );
 
-            for (let index = 0; index < palette.length; index += 1) {
+            for (let index = 0; index < PCB_ART_COLORS.length; index += 1) {
                 blobs[`color${index}`] = await canvasToBlob(
                     renderBinaryMask(
                         quantized.labels,
@@ -258,55 +258,13 @@ const PcbArtTool: React.FC = () => {
         } finally {
             if (currentJobId === jobIdRef.current) setIsProcessing(false);
         }
-    }, [
-        brightness,
-        clearResultUrls,
-        contrast,
-        maxDimension,
-        mode,
-        palette,
-        smoothing,
-        sourceUrl,
-    ]);
+    }, [clearResultUrls, sourceUrl]);
 
     useEffect(() => {
         if (!sourceUrl) return;
         const timer = window.setTimeout(processImage, 220);
         return () => window.clearTimeout(timer);
     }, [processImage, sourceUrl]);
-
-    const selectPreset = useCallback((nextPresetId: string) => {
-        const preset = PCB_PALETTE_PRESETS.find(item => item.id === nextPresetId);
-        if (!preset) return;
-        setPresetId(preset.id);
-        setPalette(clonePalette(preset.colors));
-    }, []);
-
-    const updateColor = useCallback((index: number, patch: Partial<ArtColor>) => {
-        setPresetId('custom');
-        setPalette(current =>
-            current.map((color, colorIndex) =>
-                colorIndex === index ? { ...color, ...patch } : color
-            )
-        );
-    }, []);
-
-    const toggleMaterial = useCallback((colorIndex: number, material: MaterialKey) => {
-        setPresetId('custom');
-        setPalette(current =>
-            current.map((color, index) =>
-                index === colorIndex
-                    ? {
-                        ...color,
-                        recipe: {
-                            ...color.recipe,
-                            [material]: !color.recipe[material],
-                        },
-                    }
-                    : color
-            )
-        );
-    }, []);
 
     const resetImage = useCallback(() => {
         jobIdRef.current += 1;
@@ -331,33 +289,35 @@ const PcbArtTool: React.FC = () => {
         try {
             const zip = new JSZip();
             const baseName = safeFilename(selectedFile.name);
-            zip.file(`${baseName}_四色预览.png`, result.blobs.artwork);
+            zip.file(`${baseName}_参考板效果.png`, result.blobs.artwork);
+            zip.file(`${baseName}_六色分色稿.png`, result.blobs.separation);
 
             const manufacturing = zip.folder('01_制版图');
             manufacturing?.file(`${baseName}_顶层铜皮.png`, result.blobs.copper);
-            manufacturing?.file(`${baseName}_阻焊开窗.png`, result.blobs.solderMaskOpening);
+            manufacturing?.file(`${baseName}_正面阻焊开窗.png`, result.blobs.solderMaskOpening);
+            manufacturing?.file(`${baseName}_背面阻焊开窗.png`, result.blobs.backSolderMaskOpening);
             manufacturing?.file(`${baseName}_顶层丝印.png`, result.blobs.silkscreen);
 
-            const separations = zip.folder('02_四色分离');
-            palette.forEach((color, index) => {
+            const separations = zip.folder('02_六色分离');
+            PCB_ART_COLORS.forEach((color, index) => {
                 separations?.file(
                     `${index + 1}_${color.name.replace(/[^\w\u4e00-\u9fa5-]+/g, '_')}.png`,
                     result.blobs[`color${index}`]
                 );
             });
 
-            const recipeLines = palette.map((color, index) => {
+            const recipeLines = PCB_ART_COLORS.map((color, index) => {
                 const layers = MATERIALS
                     .filter(material => color.recipe[material.key])
                     .map(material => material.label)
                     .join(' + ') || '仅基材';
-                return `${index + 1}. ${color.name} ${color.hex}: ${layers}`;
+                return `${index + 1}. ${color.name}（判定色 ${color.matchHex} / 成品色 ${color.displayHex}）: ${layers}`;
             });
 
             zip.file(
                 'README_制版说明.txt',
                 [
-                    '四色 PCB 艺术画制版包',
+                    'PCB 艺术画制版包',
                     '',
                     `源文件: ${selectedFile.name}`,
                     `输出尺寸: ${result.width} x ${result.height} px`,
@@ -367,7 +327,7 @@ const PcbArtTool: React.FC = () => {
                     '- 黑色表示该层不处理。',
                     '- 阻焊文件导出的是开窗图，不是阻焊覆盖图。',
                     '',
-                    '四色材料配方:',
+                    '六色材料配方:',
                     ...recipeLines,
                     '',
                     '送厂前请根据板厂的 Gerber 极性、最小线宽和最小间距要求再次检查。',
@@ -379,13 +339,13 @@ const PcbArtTool: React.FC = () => {
                 compression: 'DEFLATE',
                 compressionOptions: { level: 6 },
             });
-            downloadBlob(zipBlob, `${baseName}_四色PCB艺术画.zip`);
+            downloadBlob(zipBlob, `${baseName}_PCB艺术画.zip`);
         } catch (packagingError) {
             setError(packagingError instanceof Error ? packagingError.message : '打包失败');
         } finally {
             setIsPackaging(false);
         }
-    }, [palette, result, selectedFile]);
+    }, [result, selectedFile]);
 
     const previewSource = activePreview === 'original'
         ? sourceUrl
@@ -396,10 +356,10 @@ const PcbArtTool: React.FC = () => {
         <div className="flex w-full flex-col items-center px-4 py-5 sm:px-6 lg:h-[calc(100vh-5rem)] lg:overflow-hidden lg:px-0 lg:py-0">
             <div className="mb-3 flex w-full max-w-6xl flex-none flex-col items-center gap-1 text-center">
                 <p className="text-3xl font-black leading-tight tracking-tighter text-gray-900 dark:text-white sm:text-4xl">
-                    四色 PCB 艺术画
+                    PCB 艺术画
                 </p>
                 <p className="text-sm font-normal text-gray-500 dark:text-gray-400">
-                    图片四色简化与铜皮、阻焊、丝印制版图生成
+                    复刻参考板的蓝色阻焊、裸铜、基材与白色丝印组合
                 </p>
             </div>
 
@@ -469,7 +429,7 @@ const PcbArtTool: React.FC = () => {
                             </button>
                         </div>
 
-                        <div className="grid h-10 flex-none grid-cols-5 border-b border-gray-200 bg-gray-50/50 px-2 dark:border-gray-700/50 dark:bg-gray-800/20">
+                        <div className="grid h-10 flex-none grid-cols-6 border-b border-gray-200 bg-gray-50/50 px-2 dark:border-gray-700/50 dark:bg-gray-800/20">
                             {PREVIEW_TABS.map(tab => (
                                 <button
                                     key={tab.id}
@@ -513,15 +473,18 @@ const PcbArtTool: React.FC = () => {
                             )}
                         </div>
 
-                        <div className="grid h-12 flex-none grid-cols-4 border-t border-gray-200 dark:border-gray-700/50">
-                            {palette.map((color, index) => (
+                        <div
+                            className="grid h-12 flex-none border-t border-gray-200 dark:border-gray-700/50"
+                            style={{ gridTemplateColumns: `repeat(${PCB_ART_COLORS.length}, minmax(0, 1fr))` }}
+                        >
+                            {PCB_ART_COLORS.map((color, index) => (
                                 <div
                                     key={color.id}
                                     className="flex min-w-0 items-center justify-center gap-2 border-r border-gray-200 px-2 last:border-r-0 dark:border-gray-700/50"
                                 >
                                     <span
                                         className="h-6 w-6 flex-none rounded border border-black/10"
-                                        style={{ backgroundColor: color.hex }}
+                                        style={{ backgroundColor: color.displayHex }}
                                     />
                                     <div className="min-w-0">
                                         <p className="truncate text-[10px] font-medium text-gray-700 dark:text-gray-300">{color.name}</p>
@@ -535,167 +498,51 @@ const PcbArtTool: React.FC = () => {
                     </section>
 
                     <aside className="flex flex-col gap-3 p-3 lg:min-h-0">
-                        <div className="flex items-center justify-between">
+                        <div className="flex items-center justify-between gap-2">
                             <h2 className="flex items-center gap-1.5 text-sm font-semibold text-gray-900 dark:text-white">
-                                <span className="material-symbols-outlined text-lg">tune</span>
-                                分色参数
+                                <span className="material-symbols-outlined text-lg">verified</span>
+                                固定六色工艺
                             </h2>
-                            <div className="flex rounded-lg bg-gray-100 p-1 dark:bg-white/5">
-                                {[
-                                    { value: 'tone' as const, label: '照片' },
-                                    { value: 'color' as const, label: '插画' },
-                                ].map(option => (
-                                    <button
-                                        key={option.value}
-                                        type="button"
-                                        onClick={() => setMode(option.value)}
-                                        className={`rounded-md px-3 py-1 text-[11px] font-medium ${
-                                            mode === option.value
-                                                ? 'bg-white text-primary shadow-sm dark:bg-gray-700 dark:text-white'
-                                                : 'text-gray-500 dark:text-gray-400'
-                                        }`}
-                                    >
-                                        {option.label}
-                                    </button>
-                                ))}
-                            </div>
-                        </div>
-
-                        <div className="grid gap-2">
-                            {[
-                                {
-                                    id: 'pcb-brightness',
-                                    label: '曝光',
-                                    value: brightness,
-                                    display: `${brightness > 0 ? '+' : ''}${brightness}`,
-                                    min: -25,
-                                    max: 25,
-                                    onChange: setBrightness,
-                                },
-                                {
-                                    id: 'pcb-contrast',
-                                    label: '对比度',
-                                    value: contrast,
-                                    display: `${contrast}%`,
-                                    min: 70,
-                                    max: 170,
-                                    onChange: setContrast,
-                                },
-                                {
-                                    id: 'pcb-smoothing',
-                                    label: '色块净化',
-                                    value: smoothing,
-                                    display: ['关闭', '轻净', '纯净', '极净'][smoothing],
-                                    min: 0,
-                                    max: 3,
-                                    onChange: setSmoothing,
-                                },
-                            ].map(control => (
-                                <div key={control.id} className="grid grid-cols-[62px_1fr_38px] items-center gap-2">
-                                    <label htmlFor={control.id} className="text-[11px] font-medium text-gray-600 dark:text-gray-300">
-                                        {control.label}
-                                    </label>
-                                    <input
-                                        id={control.id}
-                                        type="range"
-                                        min={control.min}
-                                        max={control.max}
-                                        value={control.value}
-                                        onChange={event => control.onChange(Number(event.target.value))}
-                                        className="h-1.5 w-full cursor-pointer accent-primary"
-                                    />
-                                    <span className="text-right text-[10px] text-primary">{control.display}</span>
-                                </div>
-                            ))}
-                        </div>
-
-                        <div className="grid grid-cols-2 gap-2">
-                            <label className="text-[10px] font-medium text-gray-500 dark:text-gray-400">
-                                输出精度
-                                <select
-                                    aria-label="输出精度"
-                                    value={maxDimension}
-                                    onChange={event => setMaxDimension(Number(event.target.value))}
-                                    className="mt-1 h-8 w-full rounded-lg border border-gray-200 bg-white px-2 text-[11px] font-medium text-gray-800 outline-none focus:border-primary dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200"
-                                >
-                                    {OUTPUT_SIZES.map(size => (
-                                        <option key={size.value} value={size.value}>{size.label}</option>
-                                    ))}
-                                </select>
-                            </label>
-                            <label className="text-[10px] font-medium text-gray-500 dark:text-gray-400">
-                                板材风格
-                                <select
-                                    aria-label="板材风格"
-                                    value={presetId === 'custom' ? 'custom' : presetId}
-                                    onChange={event => {
-                                        if (event.target.value !== 'custom') selectPreset(event.target.value);
-                                    }}
-                                    className="mt-1 h-8 w-full rounded-lg border border-gray-200 bg-white px-2 text-[11px] font-medium text-gray-800 outline-none focus:border-primary dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200"
-                                >
-                                    {PCB_PALETTE_PRESETS.map(preset => (
-                                        <option key={preset.id} value={preset.id}>{preset.name}</option>
-                                    ))}
-                                    {presetId === 'custom' && <option value="custom">自定义</option>}
-                                </select>
-                            </label>
+                            <span className="rounded-lg bg-primary/10 px-2.5 py-1.5 text-[10px] font-semibold text-primary">
+                                参考板基准
+                            </span>
                         </div>
 
                         <div className="border-t border-gray-200 pt-3 dark:border-gray-700/50">
-                            <div className="mb-2 flex items-center justify-between">
-                                <h2 className="flex items-center gap-1.5 text-sm font-semibold text-gray-900 dark:text-white">
-                                    <span className="material-symbols-outlined text-lg">palette</span>
-                                    四色材料配方
-                                </h2>
-                                {presetId === 'custom' && (
-                                    <button
-                                        type="button"
-                                        onClick={() => selectPreset(defaultPreset.id)}
-                                        className="text-[10px] font-medium text-primary hover:underline"
-                                    >
-                                        恢复默认
-                                    </button>
-                                )}
-                            </div>
+                            <h2 className="mb-2 flex items-center gap-1.5 text-sm font-semibold text-gray-900 dark:text-white">
+                                <span className="material-symbols-outlined text-lg">palette</span>
+                                六种真实材料色
+                            </h2>
 
                             <div className="grid grid-cols-2 gap-2">
-                                {palette.map((color, index) => (
+                                {PCB_ART_COLORS.map(color => (
                                     <div key={color.id} className="rounded-lg border border-gray-200 p-2 dark:border-gray-700">
                                         <div className="flex items-center gap-2">
-                                            <input
-                                                type="color"
-                                                value={color.hex}
-                                                onChange={event => updateColor(index, { hex: event.target.value.toUpperCase() })}
-                                                className="h-7 w-7 flex-none cursor-pointer rounded border-0 bg-transparent p-0"
-                                                aria-label={`修改${color.name}颜色`}
+                                            <span
+                                                className="h-7 w-7 flex-none rounded border border-black/10"
+                                                style={{ backgroundColor: color.displayHex }}
                                             />
-                                            <input
-                                                type="text"
-                                                value={color.name}
-                                                onChange={event => updateColor(index, { name: event.target.value })}
-                                                className="min-w-0 flex-1 border-0 bg-transparent text-[11px] font-medium text-gray-800 outline-none dark:text-gray-200"
-                                                aria-label={`修改第${index + 1}层名称`}
-                                            />
+                                            <div className="min-w-0">
+                                                <p className="truncate text-[11px] font-semibold text-gray-800 dark:text-gray-200">
+                                                    {color.name}
+                                                </p>
+                                                <p className="truncate text-[9px] text-gray-400">
+                                                    {color.description}
+                                                </p>
+                                            </div>
                                         </div>
                                         <div className="mt-1.5 flex gap-1">
-                                            {MATERIALS.map(material => {
-                                                const enabled = color.recipe[material.key];
-                                                return (
-                                                    <button
+                                            {MATERIALS
+                                                .filter(material => color.recipe[material.key])
+                                                .map(material => (
+                                                    <span
                                                         key={material.key}
-                                                        type="button"
-                                                        onClick={() => toggleMaterial(index, material.key)}
-                                                        className={`flex-1 rounded border px-1 py-0.5 text-[9px] font-medium ${
-                                                            enabled
-                                                                ? 'border-primary bg-primary/10 text-primary'
-                                                                : 'border-gray-200 text-gray-400 hover:border-gray-300 dark:border-gray-700'
-                                                        }`}
+                                                        className="rounded border border-primary/20 bg-primary/5 px-1 py-0.5 text-[8px] font-medium text-primary"
                                                         title={material.label}
                                                     >
                                                         {material.shortLabel}
-                                                    </button>
-                                                );
-                                            })}
+                                                    </span>
+                                                ))}
                                         </div>
                                     </div>
                                 ))}
@@ -725,7 +572,7 @@ const PcbArtTool: React.FC = () => {
                                 <button
                                     type="button"
                                     disabled={!result}
-                                    onClick={() => result && downloadBlob(result.blobs.artwork, `${baseName}_四色预览.png`)}
+                                    onClick={() => result && downloadBlob(result.blobs.artwork, `${baseName}_参考板效果.png`)}
                                     className="flex h-8 items-center justify-center gap-1 rounded-lg border border-gray-200 text-[10px] font-medium text-gray-600 hover:bg-gray-50 disabled:opacity-40 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800"
                                 >
                                     <span className="material-symbols-outlined text-sm">image</span>
